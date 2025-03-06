@@ -24,7 +24,6 @@ import { StdErrNotification } from "./lib/notificationTypes";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Bell,
   Files,
   FolderTree,
   Hammer,
@@ -37,7 +36,6 @@ import { z } from "zod";
 import "./App.css";
 import ConsoleTab from "./components/ConsoleTab";
 import HistoryAndNotifications from "./components/History";
-import PingTab from "./components/PingTab";
 import PromptsTab, { Prompt } from "./components/PromptsTab";
 import ResourcesTab from "./components/ResourcesTab";
 import RootsTab from "./components/RootsTab";
@@ -427,10 +425,6 @@ const App = () => {
                   <Hammer className="w-4 h-4 mr-2" />
                   Tools
                 </TabsTrigger>
-                <TabsTrigger value="ping">
-                  <Bell className="w-4 h-4 mr-2" />
-                  Ping
-                </TabsTrigger>
                 <TabsTrigger value="sampling" className="relative">
                   <Hash className="w-4 h-4 mr-2" />
                   Sampling
@@ -542,16 +536,6 @@ const App = () => {
                       error={errors.tools}
                     />
                     <ConsoleTab />
-                    <PingTab
-                      onPingClick={() => {
-                        void makeRequest(
-                          {
-                            method: "ping" as const,
-                          },
-                          EmptyResultSchema,
-                        );
-                      }}
-                    />
                     <SamplingTab
                       pendingRequests={pendingSampleRequests}
                       onApprove={handleApproveSampling}
