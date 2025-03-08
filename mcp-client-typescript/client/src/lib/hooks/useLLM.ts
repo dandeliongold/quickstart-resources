@@ -44,6 +44,8 @@ export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = []) {
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
   const [systemPrompt, setSystemPrompt] = useState<string>("");
+  const [maxTokens, setMaxTokens] = useState<number>(8062);
+  const [temperature, setTemperature] = useState<number>(0.4);
 
   useEffect(() => {
     const toolDocs = generateToolDocumentation(tools);
@@ -58,7 +60,7 @@ When using tools:
 4. If a tool call fails, check the error message and try again if it's recoverable`);
   }, [tools]);
 
-  const processQuery = async (query: string) => {
+  const processQuery = async (query: string, maxTokens: number = 8062, temperature: number = 0.4) => {
     setProcessing(true);
     try {
       // Get available tools
@@ -68,7 +70,7 @@ When using tools:
       );
 
       // Process with LLM
-      const result = await llmService.processQuery(query, tools, history, systemPrompt);
+      const result = await llmService.processQuery(query, tools, history, systemPrompt, maxTokens, temperature);
 
       // Add the initial query and response to history
       // Add query and assistant response to history
@@ -97,7 +99,9 @@ When using tools:
           toolCall,
           toolResult,
           newHistory,
-          systemPrompt
+          systemPrompt,
+          maxTokens,
+          temperature
         );
 
         // Update history with tool result and follow-up
@@ -135,6 +139,10 @@ When using tools:
     history,
     clearHistory: () => setHistory([]),
     systemPrompt,
-    setSystemPrompt
+    setSystemPrompt,
+    maxTokens,
+    setMaxTokens,
+    temperature,
+    setTemperature
   };
 }

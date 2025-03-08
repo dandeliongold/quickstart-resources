@@ -16,7 +16,9 @@ export class LLMService {
     query: string, 
     tools: Tool[],
     history: Message[] = [],
-    systemPrompt?: string
+    systemPrompt?: string,
+    maxTokens: number = 8062,
+    temperature: number = 0.4
   ): Promise<ProcessQueryResult> {
     try {
       const response = await fetch(`${this.apiUrl}/llm/process`, {
@@ -24,7 +26,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query, tools, history, systemPrompt })
+        body: JSON.stringify({ query, tools, history, systemPrompt, maxTokens, temperature })
       });
 
       if (!response.ok) {
@@ -43,7 +45,9 @@ export class LLMService {
     toolCall: { name: string; args: Record<string, unknown>; id: string },
     toolResult: ToolResult,
     history: Message[],
-    systemPrompt?: string
+    systemPrompt?: string,
+    maxTokens: number = 8062,
+    temperature: number = 0.4
   ): Promise<ProcessQueryResult> {
     try {
       const response = await fetch(`${this.apiUrl}/llm/process-tool-result`, {
@@ -51,7 +55,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ toolCall, toolResult, history, systemPrompt })
+        body: JSON.stringify({ toolCall, toolResult, history, systemPrompt, maxTokens, temperature })
       });
 
       if (!response.ok) {

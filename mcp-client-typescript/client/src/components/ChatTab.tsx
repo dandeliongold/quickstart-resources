@@ -1,6 +1,8 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useLLM } from "@/lib/hooks/useLLM";
 import { z } from "zod";
@@ -32,14 +34,18 @@ const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
     history,
     clearHistory,
     systemPrompt,
-    setSystemPrompt
+    setSystemPrompt,
+    maxTokens,
+    setMaxTokens,
+    temperature,
+    setTemperature
   } = useLLM(makeRequest, tools);
 
   const handleSubmit = async () => {
     if (!query.trim()) return;
 
     try {
-      await processQuery(query);
+      await processQuery(query, maxTokens, temperature);
       setQuery('');
     } catch (error) {
       console.error('Error processing query:', error);
@@ -51,7 +57,8 @@ const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
       value="chat" 
       className="h-96 flex flex-col"
     >
-      <Collapsible defaultOpen={false}>
+      <div className="space-y-2">
+        <Collapsible defaultOpen={false}>
         <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
           <div className="text-sm font-medium">System Prompt</div>
           <ChevronDown className="h-4 w-4" />
@@ -76,6 +83,42 @@ const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
+          <div className="text-sm font-medium">Model Settings</div>
+          <ChevronDown className="h-4 w-4" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-4 border-b space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="maxTokens">Max Tokens</Label>
+              <Input
+                id="maxTokens"
+                type="number"
+                min={1}
+                value={maxTokens}
+                onChange={(e) => setMaxTokens(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="temperature">Temperature</Label>
+              <Input
+                id="temperature"
+                type="number"
+                min={0}
+                max={1}
+                step={0.1}
+                value={temperature}
+                onChange={(e) => setTemperature(Math.min(1, Math.max(0, parseFloat(e.target.value) || 0)))}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+      </div>
       <div className="flex-1 overflow-auto space-y-4 p-4">
         {history.map((msg, i) => (
           <div
