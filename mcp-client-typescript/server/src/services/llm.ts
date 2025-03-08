@@ -61,12 +61,23 @@ export class LLMService {
         content: [{
           type: 'tool_result' as const,
           tool_use_id: toolCall.id,
-          content: [{ 
-            type: 'text' as const, 
-            text: typeof toolResult.content === 'string' 
-              ? toolResult.content
-              : JSON.stringify(toolResult.content)
-          }]
+          content: typeof toolResult.content === 'string'
+            ? [{ type: 'text' as const, text: toolResult.content }]
+            : Array.isArray(toolResult.content)
+              ? toolResult.content.map(item => {
+                  if (item.type === 'image') {
+                    return {
+                      type: 'image' as const,
+                      source: {
+                        type: 'base64',
+                        data: item.data,
+                        media_type: item.mimeType
+                      }
+                    };
+                  }
+                  return item;
+                })
+              : [{ type: 'text' as const, text: JSON.stringify(toolResult.content, null, 2) }]
         }]
       };
 

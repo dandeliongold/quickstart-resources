@@ -7,7 +7,15 @@ import { useState, useEffect } from "react";
 import { useLLM } from "@/lib/hooks/useLLM";
 import { z } from "zod";
 import { Message, ContentBlock, TextBlock, ToolResultBlock, ToolUseBlock } from '../../../server/src/types.js';
-import { Tool, Prompt, GetPromptResult, PromptReference } from "@modelcontextprotocol/sdk/types.js";
+import { 
+  Tool, 
+  Prompt, 
+  GetPromptResult, 
+  PromptReference,
+  TextContent,
+  ImageContent,
+  EmbeddedResource
+} from "@modelcontextprotocol/sdk/types.js";
 import { Combobox } from "@/components/ui/combobox";
 import {
   Collapsible,
@@ -337,27 +345,71 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                       return (
                         <div key={j} className="bg-gray-50 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
                           <div className="font-medium mb-2">Tool Result (ID: {block.tool_use_id})</div>
-                          <pre className="overflow-auto max-h-64">
-                            {Array.isArray(content)
-                              ? content.map((item: TextBlock) => {
+                          {Array.isArray(content) ? (
+                            <div className="space-y-2">
+                              {(content as Array<TextContent | ImageContent | EmbeddedResource>).map((item, k) => {
+                                if (item.type === "text") {
                                   // Try to parse as JSON for better formatting
                                   try {
                                     const parsed = JSON.parse(item.text);
-                                    return JSON.stringify(parsed, null, 2);
+                                    return (
+                                      <pre key={k} className="overflow-auto max-h-64">
+                                        {JSON.stringify(parsed, null, 2)}
+                                      </pre>
+                                    );
                                   } catch {
-                                    return item.text;
+                                    return (
+                                      <pre key={k} className="overflow-auto max-h-64">
+                                        {item.text}
+                                      </pre>
+                                    );
                                   }
-                                }).join('\n')
-                              : (() => {
-                                  // Try to parse string content as JSON
-                                  try {
-                                    const parsed = JSON.parse(content);
-                                    return JSON.stringify(parsed, null, 2);
-                                  } catch {
-                                    return content;
+                                }
+                                if (item.type === "image") {
+                                  return (
+                                    <img
+                                      key={k}
+                                      src={`data:${item.mimeType};base64,${item.data}`}
+                                      alt="Tool result image"
+                                      className="max-w-full h-auto rounded"
+                                    />
+                                  );
+                                }
+                                if (item.type === "resource" && item.resource) {
+                                  if (item.resource.mimeType?.startsWith("audio/")) {
+                                    return (
+                                      <audio
+                                        key={k}
+                                        controls
+                                        src={`data:${item.resource.mimeType};base64,${item.resource.blob}`}
+                                        className="w-full"
+                                      >
+                                        <p>Your browser does not support audio playback</p>
+                                      </audio>
+                                    );
                                   }
-                                })()}
-                          </pre>
+                                  return (
+                                    <pre key={k} className="overflow-auto max-h-64 whitespace-pre-wrap break-words">
+                                      {JSON.stringify(item.resource, null, 2)}
+                                    </pre>
+                                  );
+                                }
+                                return null;
+                              })}
+                            </div>
+                          ) : (
+                            <pre className="overflow-auto max-h-64">
+                              {(() => {
+                                // Try to parse string content as JSON
+                                try {
+                                  const parsed = JSON.parse(content);
+                                  return JSON.stringify(parsed, null, 2);
+                                } catch {
+                                  return content;
+                                }
+                              })()}
+                            </pre>
+                          )}
                         </div>
                       );
                     }

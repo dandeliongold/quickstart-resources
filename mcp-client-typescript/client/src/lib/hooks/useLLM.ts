@@ -113,10 +113,12 @@ When using tools:
               tool_use_id: toolCall.id,
               content: typeof toolResult.content === 'string'
                 ? toolResult.content
-                : [{ 
-                    type: 'text' as const, 
-                    text: JSON.stringify(toolResult.content)
-                  }]
+                : Array.isArray(toolResult.content)
+                  ? toolResult.content  // Already an array of TextBlocks
+                  : [{ 
+                      type: 'text' as const, 
+                      text: JSON.stringify(toolResult.content, null, 2)  // Format JSON nicely
+                    }]
             }]
           },
           {
