@@ -552,17 +552,35 @@ const App = () => {
                       onRootsChange={handleRootsChange}
                     />
                     <ChatTab 
-                    makeRequest={(request, schema, options) => makeRequest(request, schema)}
-                    tools={tools}
-                    listTools={() => {
-                      clearError("tools");
-                      listTools();
-                    }}
-                    clearTools={() => {
-                      setTools([]);
-                      setNextToolCursor(undefined);
-                    }}
-                  />
+                      makeRequest={(request, schema, options) => makeRequest(request, schema)}
+                      tools={tools}
+                      listTools={() => {
+                        clearError("tools");
+                        listTools();
+                      }}
+                      clearTools={() => {
+                        setTools([]);
+                        setNextToolCursor(undefined);
+                      }}
+                      prompts={prompts}
+                      listPrompts={() => {
+                        clearError("prompts");
+                        listPrompts();
+                      }}
+                      getPrompt={async (name, args) => {
+                        const response = await makeRequest(
+                          {
+                            method: "prompts/get" as const,
+                            params: { name, arguments: args },
+                          },
+                          GetPromptResultSchema,
+                          "prompts",
+                        );
+                        return response;
+                      }}
+                      handleCompletion={handleCompletion}
+                      completionsSupported={completionsSupported}
+                    />
                   </>
                 )}
               </div>
