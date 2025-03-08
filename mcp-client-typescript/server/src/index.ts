@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import cors from "cors";
 import { parseArgs } from "node:util";
 import { parse as shellParseArgs } from "shell-quote";
+import { LLMService } from "./services/llm.js";
 
 import {
   SSEClientTransport,
@@ -34,6 +36,39 @@ const { values } = parseArgs({
 
 const app = express();
 app.use(cors());
+
+if (!process.env.ANTHROPIC_API_KEY) {
+  throw new Error('ANTHROPIC_API_KEY environment variable is required');
+}
+
+const llmService = new LLMService(process.env.ANTHROPIC_API_KEY);
+
+app.post("/llm/process", express.json(), async (req, res) => {
+  try {
+    const { query, tools, history } = req.body;
+    const result = await llmService.processQuery(query, tools, history);
+    res.json(result);
+  } catch (error: unknown) {
+    console.error("Error processing LLM query:", error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    });
+  }
+});
+
+app.post("/llm/process-tool-result", express.json(), async (req, res) => {
+  try {
+    const { toolCall, toolResult, history } = req.body;
+    const result = await llmService.processToolResult(toolCall, toolResult, history);
+    res.json(result);
+  } catch (error: unknown) {
+    console.error("Error processing tool result:", error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    });
+  }
+});
+
 
 let webAppTransports: SSEServerTransport[] = [];
 

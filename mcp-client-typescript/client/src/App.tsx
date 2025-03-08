@@ -3,7 +3,6 @@ import {
   CompatibilityCallToolResult,
   CompatibilityCallToolResultSchema,
   CreateMessageResult,
-  EmptyResultSchema,
   GetPromptResultSchema,
   ListPromptsResultSchema,
   ListResourcesResultSchema,
@@ -29,12 +28,14 @@ import {
   Hammer,
   Hash,
   MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 
 import { toast } from "react-toastify";
 import { z } from "zod";
 import "./App.css";
 import ConsoleTab from "./components/ConsoleTab";
+import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
 import PromptsTab, { Prompt } from "./components/PromptsTab";
 import ResourcesTab from "./components/ResourcesTab";
@@ -438,6 +439,10 @@ const App = () => {
                   <FolderTree className="w-4 h-4 mr-2" />
                   Roots
                 </TabsTrigger>
+                <TabsTrigger value="chat">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Chat
+                </TabsTrigger>
               </TabsList>
 
               <div className="w-full">
@@ -546,6 +551,7 @@ const App = () => {
                       setRoots={setRoots}
                       onRootsChange={handleRootsChange}
                     />
+                    <ChatTab makeRequest={(request, schema, options) => makeRequest(request, schema)} />
                   </>
                 )}
               </div>
