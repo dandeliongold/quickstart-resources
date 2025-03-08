@@ -19,7 +19,7 @@ interface ChatTabProps {
     schema: T,
     options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
   ) => Promise<z.output<T>>;
-  tools: Tool[];
+  tools: Tool[] | undefined;
   listTools: () => void;
   clearTools: () => void;
 }
@@ -46,12 +46,6 @@ const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
     }
   };
 
-  useEffect(() => {
-    if (tools.length === 0) {
-      listTools();
-    }
-  }, [tools.length, listTools]);
-
   return (
     <TabsContent 
       value="chat" 
@@ -64,13 +58,21 @@ const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-4 border-b">
-            <Textarea
-              id="systemPrompt"
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Enter system prompt..."
-              className="h-24 resize-none"
-            />
+            <div className="flex gap-2">
+              <Textarea
+                id="systemPrompt"
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="Enter system prompt..."
+                className="h-24 resize-none"
+              />
+              <Button 
+                onClick={listTools}
+                className="shrink-0"
+              >
+                Update System Prompt
+              </Button>
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>

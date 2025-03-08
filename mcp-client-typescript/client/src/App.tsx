@@ -551,7 +551,18 @@ const App = () => {
                       setRoots={setRoots}
                       onRootsChange={handleRootsChange}
                     />
-                    <ChatTab makeRequest={(request, schema, options) => makeRequest(request, schema)} />
+                    <ChatTab 
+                    makeRequest={(request, schema, options) => makeRequest(request, schema)}
+                    tools={tools}
+                    listTools={() => {
+                      clearError("tools");
+                      listTools();
+                    }}
+                    clearTools={() => {
+                      setTools([]);
+                      setNextToolCursor(undefined);
+                    }}
+                  />
                   </>
                 )}
               </div>

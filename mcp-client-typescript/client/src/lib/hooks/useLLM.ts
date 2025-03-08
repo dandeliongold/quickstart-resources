@@ -11,7 +11,7 @@ type MakeRequestFunction = <T extends z.ZodType>(
   options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
 ) => Promise<z.output<T>>;
 
-const generateToolDocumentation = (tools: Tool[]): string => {
+const generateToolDocumentation = (tools: Tool[] = []): string => {
   if (tools.length === 0) {
     return "No tools are currently available.";
   }
@@ -39,7 +39,7 @@ const generateToolDocumentation = (tools: Tool[]): string => {
   return documentation;
 };
 
-export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[]) {
+export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = []) {
   const llmService = useMemo(() => new LLMService(), []);
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
