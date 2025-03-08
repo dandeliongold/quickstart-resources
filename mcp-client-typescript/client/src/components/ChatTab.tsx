@@ -111,16 +111,16 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
   return (
     <TabsContent 
       value="chat" 
-      className="h-96 flex flex-col"
+      className="h-full flex flex-col"
     >
       <div className="space-y-2">
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
             <div className="text-sm font-medium">Prompt Selection</div>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-4 border-b">
+            <div className="p-2 border-b max-h-[40vh] overflow-y-auto">
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -249,12 +249,12 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
         </Collapsible>
 
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
             <div className="text-sm font-medium">System Prompt</div>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-4 border-b">
+            <div className="p-2 border-b max-h-[20vh] overflow-y-auto">
               <div className="flex gap-2">
                 <Textarea
                   id="systemPrompt"
@@ -275,12 +275,12 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
         </Collapsible>
 
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
             <div className="text-sm font-medium">Model Settings</div>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-4 border-b space-y-4">
+            <div className="p-2 border-b space-y-2 max-h-[20vh] overflow-y-auto">
               <div className="space-y-2">
                 <Label htmlFor="maxTokens">Max Tokens</Label>
                 <Input
@@ -309,7 +309,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
           </CollapsibleContent>
         </Collapsible>
       </div>
-      <div className="flex-1 overflow-auto space-y-4 p-4">
+      <div className="flex-1 overflow-auto space-y-2 p-2 min-h-[40vh]">
         {history.map((msg, i) => (
           <div
             key={i}
@@ -379,7 +379,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
         ))}
       </div>
 
-      <div className="p-4 border-t">
+      <div className="p-2 border-t">
         <div className="flex gap-2">
           <Textarea
             value={query}
