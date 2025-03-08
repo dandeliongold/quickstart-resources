@@ -1,6 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { Tool, Result as ToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { Message, ContentBlock, TextBlock } from '../types.js';
+import { Message, ContentBlock, TextBlock, ProcessQueryResult } from '../types.js';
 
 
 export class LLMService {
@@ -17,7 +17,8 @@ export class LLMService {
   async processQuery(
     query: string, 
     tools: Tool[],
-    history: Message[] = []
+    history: Message[] = [],
+    systemPrompt?: string
   ): Promise<ProcessQueryResult> {
     try {
       // Format tools according to Anthropic's API spec
@@ -36,7 +37,7 @@ export class LLMService {
         model: this.model,
         max_tokens: 1000,
         messages: [...history, { role: "user", content: query }],
-        system: "You are a helpful AI assistant that can use tools to accomplish tasks.",
+        system: systemPrompt || "You are a helpful AI assistant that can use tools to accomplish tasks.",
         tools: formattedTools
       });
 
@@ -50,7 +51,8 @@ export class LLMService {
   async processToolResult(
     toolCall: { name: string; args: Record<string, unknown>; id: string },
     toolResult: ToolResult,
-    history: Message[]
+    history: Message[],
+    systemPrompt?: string
   ): Promise<ProcessQueryResult> {
     try {
       // Create a tool result message according to the API spec
@@ -82,7 +84,7 @@ export class LLMService {
           lastAssistantMessage,
           toolResultMessage
         ],
-        system: "You are a helpful AI assistant that can use tools to accomplish tasks."
+        system: systemPrompt || "You are a helpful AI assistant that can use tools to accomplish tasks."
       });
 
       return this.processResponse(response, []);

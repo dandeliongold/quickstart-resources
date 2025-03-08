@@ -15,7 +15,8 @@ export class LLMService {
   async processQuery(
     query: string, 
     tools: Tool[],
-    history: Message[] = []
+    history: Message[] = [],
+    systemPrompt?: string
   ): Promise<ProcessQueryResult> {
     try {
       const response = await fetch(`${this.apiUrl}/llm/process`, {
@@ -23,7 +24,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query, tools, history })
+        body: JSON.stringify({ query, tools, history, systemPrompt })
       });
 
       if (!response.ok) {
@@ -41,7 +42,8 @@ export class LLMService {
   async processToolResult(
     toolCall: { name: string; args: Record<string, unknown>; id: string },
     toolResult: ToolResult,
-    history: Message[]
+    history: Message[],
+    systemPrompt?: string
   ): Promise<ProcessQueryResult> {
     try {
       const response = await fetch(`${this.apiUrl}/llm/process-tool-result`, {
@@ -49,7 +51,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ toolCall, toolResult, history })
+        body: JSON.stringify({ toolCall, toolResult, history, systemPrompt })
       });
 
       if (!response.ok) {

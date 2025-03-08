@@ -15,6 +15,9 @@ export function useLLM(makeRequest: MakeRequestFunction) {
   const llmService = useMemo(() => new LLMService(), []);
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    "You are a helpful AI assistant that can use tools to accomplish tasks."
+  );
 
   const processQuery = async (query: string) => {
     setProcessing(true);
@@ -26,7 +29,7 @@ export function useLLM(makeRequest: MakeRequestFunction) {
       );
 
       // Process with LLM
-      const result = await llmService.processQuery(query, tools, history);
+      const result = await llmService.processQuery(query, tools, history, systemPrompt);
 
       // Add the initial query and response to history
       // Add query and assistant response to history
@@ -54,7 +57,8 @@ export function useLLM(makeRequest: MakeRequestFunction) {
         const followUp = await llmService.processToolResult(
           toolCall,
           toolResult,
-          newHistory
+          newHistory,
+          systemPrompt
         );
 
         // Update history with tool result and follow-up
@@ -90,6 +94,8 @@ export function useLLM(makeRequest: MakeRequestFunction) {
     processQuery,
     processing,
     history,
-    clearHistory: () => setHistory([])
+    clearHistory: () => setHistory([]),
+    systemPrompt,
+    setSystemPrompt
   };
 }

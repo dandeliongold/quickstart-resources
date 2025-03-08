@@ -20,7 +20,9 @@ const ChatTab = ({ makeRequest }: ChatTabProps) => {
     processQuery,
     processing,
     history,
-    clearHistory
+    clearHistory,
+    systemPrompt,
+    setSystemPrompt
   } = useLLM(makeRequest);
 
   const handleSubmit = async () => {
@@ -36,6 +38,20 @@ const ChatTab = ({ makeRequest }: ChatTabProps) => {
 
   return (
     <TabsContent value="chat" className="h-96 flex flex-col">
+      <div className="p-4 border-b">
+        <div className="space-y-2">
+          <label htmlFor="systemPrompt" className="text-sm font-medium">
+            System Prompt
+          </label>
+          <Textarea
+            id="systemPrompt"
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            placeholder="Enter system prompt..."
+            className="h-24 resize-none"
+          />
+        </div>
+      </div>
       <div className="flex-1 overflow-auto space-y-4 p-4">
         {history.map((msg, i) => (
           <div

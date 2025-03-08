@@ -45,8 +45,8 @@ const llmService = new LLMService(process.env.ANTHROPIC_API_KEY);
 
 app.post("/llm/process", express.json(), async (req, res) => {
   try {
-    const { query, tools, history } = req.body;
-    const result = await llmService.processQuery(query, tools, history);
+    const { query, tools, history, systemPrompt } = req.body;
+    const result = await llmService.processQuery(query, tools, history, systemPrompt);
     res.json(result);
   } catch (error: unknown) {
     console.error("Error processing LLM query:", error);
@@ -58,8 +58,8 @@ app.post("/llm/process", express.json(), async (req, res) => {
 
 app.post("/llm/process-tool-result", express.json(), async (req, res) => {
   try {
-    const { toolCall, toolResult, history } = req.body;
-    const result = await llmService.processToolResult(toolCall, toolResult, history);
+    const { toolCall, toolResult, history, systemPrompt } = req.body;
+    const result = await llmService.processToolResult(toolCall, toolResult, history, systemPrompt);
     res.json(result);
   } catch (error: unknown) {
     console.error("Error processing tool result:", error);
