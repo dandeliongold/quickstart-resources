@@ -1,10 +1,17 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLLM } from "@/lib/hooks/useLLM";
 import { z } from "zod";
 import { Message, ContentBlock, TextBlock } from '../../../server/src/types.js';
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface ChatTabProps {
   makeRequest: <T extends z.ZodType>(
@@ -12,9 +19,12 @@ interface ChatTabProps {
     schema: T,
     options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
   ) => Promise<z.output<T>>;
+  tools: Tool[];
+  listTools: () => void;
+  clearTools: () => void;
 }
 
-const ChatTab = ({ makeRequest }: ChatTabProps) => {
+const ChatTab = ({ makeRequest, tools, listTools }: ChatTabProps) => {
   const [query, setQuery] = useState('');
   const {
     processQuery,
@@ -23,7 +33,7 @@ const ChatTab = ({ makeRequest }: ChatTabProps) => {
     clearHistory,
     systemPrompt,
     setSystemPrompt
-  } = useLLM(makeRequest);
+  } = useLLM(makeRequest, tools);
 
   const handleSubmit = async () => {
     if (!query.trim()) return;
@@ -36,22 +46,34 @@ const ChatTab = ({ makeRequest }: ChatTabProps) => {
     }
   };
 
+  useEffect(() => {
+    if (tools.length === 0) {
+      listTools();
+    }
+  }, [tools.length, listTools]);
+
   return (
-    <TabsContent value="chat" className="h-96 flex flex-col">
-      <div className="p-4 border-b">
-        <div className="space-y-2">
-          <label htmlFor="systemPrompt" className="text-sm font-medium">
-            System Prompt
-          </label>
-          <Textarea
-            id="systemPrompt"
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            placeholder="Enter system prompt..."
-            className="h-24 resize-none"
-          />
-        </div>
-      </div>
+    <TabsContent 
+      value="chat" 
+      className="h-96 flex flex-col"
+    >
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b">
+          <div className="text-sm font-medium">System Prompt</div>
+          <ChevronDown className="h-4 w-4" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-4 border-b">
+            <Textarea
+              id="systemPrompt"
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              placeholder="Enter system prompt..."
+              className="h-24 resize-none"
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       <div className="flex-1 overflow-auto space-y-4 p-4">
         {history.map((msg, i) => (
           <div

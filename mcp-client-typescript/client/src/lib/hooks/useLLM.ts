@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { LLMService } from '../services/llm';
-import { ListToolsResultSchema, ResultSchema } from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsResultSchema, ResultSchema, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import { Message } from '../../../../server/src/types.js';
@@ -11,13 +11,52 @@ type MakeRequestFunction = <T extends z.ZodType>(
   options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
 ) => Promise<z.output<T>>;
 
-export function useLLM(makeRequest: MakeRequestFunction) {
+const generateToolDocumentation = (tools: Tool[]): string => {
+  if (tools.length === 0) {
+    return "No tools are currently available.";
+  }
+
+  let documentation = "Available Tools:\n\n";
+  tools.forEach(tool => {
+    documentation += `Tool: ${tool.name}\n`;
+    documentation += `Description: ${tool.description || 'No description available'}\n`;
+    
+    if (tool.inputSchema?.properties) {
+      documentation += "Parameters:\n";
+      const required = Array.isArray(tool.inputSchema?.required) ? tool.inputSchema.required : [];
+      const properties = tool.inputSchema?.properties || {};
+      Object.entries(properties).forEach(([paramName, paramDetails]) => {
+        const isRequired = required.includes(paramName);
+        const details = paramDetails as { type?: string; description?: string };
+        documentation += `- ${paramName}${isRequired ? ' (Required)' : ' (Optional)'}: ${details.type || 'any'}\n`;
+        if (details.description) {
+          documentation += `  ${details.description}\n`;
+        }
+      });
+    }
+    documentation += "\n";
+  });
+  return documentation;
+};
+
+export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[]) {
   const llmService = useMemo(() => new LLMService(), []);
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
-  const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are a helpful AI assistant that can use tools to accomplish tasks."
-  );
+  const [systemPrompt, setSystemPrompt] = useState<string>("");
+
+  useEffect(() => {
+    const toolDocs = generateToolDocumentation(tools);
+    setSystemPrompt(`You have access to various tools from connected MCP servers. When a user asks for information that requires using these tools, you should use the appropriate tool rather than stating you don't have access to that information.
+
+${toolDocs}
+
+When using tools:
+1. Choose the most appropriate tool based on the user's request
+2. Provide all required parameters
+3. Format the response in a user-friendly way
+4. If a tool call fails, check the error message and try again if it's recoverable`);
+  }, [tools]);
 
   const processQuery = async (query: string) => {
     setProcessing(true);
