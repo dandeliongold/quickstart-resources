@@ -122,26 +122,34 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
           <CollapsibleContent>
             <div className="p-4 border-b">
               <div className="space-y-4">
-                <div>
-                  <Label>Select Prompt</Label>
-                  <Combobox
-                    value={selectedPrompt?.name || ""}
-                    onChange={(value) => {
-                      const prompt = prompts.find(p => p.name === value);
-                      setSelectedPrompt(prompt || null);
-                      setPromptArgs({});
-                      setPromptContent(null);
-                      
-                      // If prompt has no arguments, get content immediately
-                      if (prompt && (!prompt.arguments || prompt.arguments.length === 0)) {
-                        getPrompt(prompt.name, {})
-                          .then(setPromptContent)
-                          .catch(console.error);
-                      }
-                    }}
-                    onInputChange={() => {}}
-                    options={prompts.map(p => p.name)}
-                  />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label>Select Prompt</Label>
+                    <Combobox
+                      value={selectedPrompt?.name || ""}
+                      onChange={(value) => {
+                        const prompt = prompts.find(p => p.name === value);
+                        setSelectedPrompt(prompt || null);
+                        setPromptArgs({});
+                        setPromptContent(null);
+                        
+                        // If prompt has no arguments, get content immediately
+                        if (prompt && (!prompt.arguments || prompt.arguments.length === 0)) {
+                          getPrompt(prompt.name, {})
+                            .then(setPromptContent)
+                            .catch(console.error);
+                        }
+                      }}
+                      onInputChange={() => {}}
+                      options={prompts.map(p => p.name)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={listPrompts}
+                    className="shrink-0 self-end mb-[2px]"
+                  >
+                    Update Prompts
+                  </Button>
                 </div>
 
                 {selectedPrompt?.arguments && (
