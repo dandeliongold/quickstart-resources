@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useLLM } from "@/lib/hooks/useLLM";
 import { z } from "zod";
@@ -14,7 +15,8 @@ import {
   PromptReference,
   TextContent,
   ImageContent,
-  EmbeddedResource
+  EmbeddedResource,
+  Resource
 } from "@modelcontextprotocol/sdk/types.js";
 import { Combobox } from "@/components/ui/combobox";
 import {
@@ -42,10 +44,13 @@ interface ChatTabProps {
     value: string,
   ) => Promise<string[]>;
   completionsSupported: boolean;
+  resources: Resource[];
+  listResources: () => void;
 }
 
-const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPrompt, handleCompletion, completionsSupported }: ChatTabProps) => {
+const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPrompt, handleCompletion, completionsSupported, resources, listResources }: ChatTabProps) => {
   const [query, setQuery] = useState('');
+  const [includeResources, setIncludeResources] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [promptArgs, setPromptArgs] = useState<Record<string, string>>({});
   const [promptContent, setPromptContent] = useState<GetPromptResult | null>(null);
@@ -79,7 +84,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
     setMaxTokens,
     temperature,
     setTemperature
-  } = useLLM(makeRequest, tools);
+  } = useLLM(makeRequest, tools, includeResources ? resources : []);
 
   const handleSubmit = async () => {
     if (!query.trim() && !promptContent) return;
@@ -271,12 +276,32 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                   placeholder="Enter system prompt..."
                   className="h-24 resize-none"
                 />
-                <Button 
-                  onClick={listTools}
-                  className="shrink-0"
-                >
-                  Update System Prompt
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="includeResources"
+                      checked={includeResources}
+                      onCheckedChange={(checked) => setIncludeResources(checked as boolean)}
+                    />
+                    <Label htmlFor="includeResources" className="text-sm">
+                      Include Resources
+                    </Label>
+                  </div>
+                  <Button 
+                    onClick={async () => {
+                      // Always list tools
+                      await listTools();
+                      
+                      // List resources if checkbox is checked
+                      if (includeResources) {
+                        await listResources();
+                      }
+                    }}
+                    className="shrink-0"
+                  >
+                    Update System Prompt
+                  </Button>
+                </div>
               </div>
             </div>
           </CollapsibleContent>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { LLMService } from '../services/llm';
-import { ListToolsResultSchema, ResultSchema, Tool } from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import { Message } from '../../../../server/src/types.js';
@@ -10,6 +10,19 @@ type MakeRequestFunction = <T extends z.ZodType>(
   schema: T,
   options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
 ) => Promise<z.output<T>>;
+
+const generateResourceDocumentation = (resources: Resource[] = []): string => {
+  if (resources.length === 0) {
+    return "No resources are currently available.";
+  }
+
+  let documentation = "Available Resources:\n\n";
+  resources.forEach(resource => {
+    documentation += `Resource: ${resource.name}\n`;
+    documentation += `URI: ${resource.uri}\n\n`;
+  });
+  return documentation;
+};
 
 const generateToolDocumentation = (tools: Tool[] = []): string => {
   if (tools.length === 0) {
@@ -39,7 +52,7 @@ const generateToolDocumentation = (tools: Tool[] = []): string => {
   return documentation;
 };
 
-export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = []) {
+export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = [], resources: Resource[] = []) {
   const llmService = useMemo(() => new LLMService(), []);
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
@@ -49,7 +62,9 @@ export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = []) {
 
   useEffect(() => {
     const toolDocs = generateToolDocumentation(tools);
-    setSystemPrompt(`You have access to various tools from connected MCP servers. When a user asks for information that requires using these tools, you should use the appropriate tool rather than stating you don't have access to that information.
+    const resourceDocs = generateResourceDocumentation(resources);
+    
+    let prompt = `You have access to various tools from connected MCP servers. When a user asks for information that requires using these tools, you should use the appropriate tool rather than stating you don't have access to that information.
 
 ${toolDocs}
 
@@ -57,8 +72,14 @@ When using tools:
 1. Choose the most appropriate tool based on the user's request
 2. Provide all required parameters
 3. Format the response in a user-friendly way
-4. If a tool call fails, check the error message and try again if it's recoverable`);
-  }, [tools]);
+4. If a tool call fails, check the error message and try again if it's recoverable`;
+
+    if (resources.length > 0) {
+      prompt += `\n\nYou also have access to the following resources:\n\n${resourceDocs}`;
+    }
+
+    setSystemPrompt(prompt);
+  }, [tools, resources]);
 
   const processQuery = async (query: string, maxTokens: number = 8062, temperature: number = 0.4) => {
     setProcessing(true);

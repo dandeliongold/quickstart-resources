@@ -580,6 +580,11 @@ const App = () => {
                       }}
                       handleCompletion={handleCompletion}
                       completionsSupported={completionsSupported}
+                      resources={resources}
+                      listResources={() => {
+                        clearError("resources");
+                        listResources();
+                      }}
                     />
                   </>
                 )}
