@@ -123,16 +123,16 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
     >
       <div className="space-y-2">
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
-            <div className="text-sm font-medium">Prompt Selection</div>
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
+            <label className="text-sm font-medium">Prompt Selection</label>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-2 border-b max-h-[40vh] overflow-y-auto">
-              <div className="space-y-4">
+            <div className="p-4 border-b border-border bg-card space-y-4">
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <Label>Select Prompt</Label>
+                    <label className="text-sm font-medium">Select Prompt</label>
                     <Combobox
                       value={selectedPrompt?.name || ""}
                       onChange={(value) => {
@@ -165,10 +165,10 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                     <div className="space-y-4">
                       {selectedPrompt.arguments.map((arg) => (
                         <div key={arg.name}>
-                          <Label htmlFor={arg.name}>
+                          <label className="text-sm font-medium" htmlFor={arg.name}>
                             {arg.name}
                             {arg.required && <span className="text-xs text-red-500 ml-1">*</span>}
-                          </Label>
+                          </label>
                           <Combobox
                             id={arg.name}
                             placeholder={`Enter ${arg.name}`}
@@ -213,7 +213,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
 
                 {promptContent && (
                   <div className="space-y-2">
-                    <Label>Preview</Label>
+                    <label className="text-sm font-medium">Preview</label>
                     <div className="bg-muted p-4 rounded space-y-4">
                       {promptContent.messages.map((msg, i) => (
                         <div key={i} className={`p-2 rounded ${
@@ -257,12 +257,12 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
         </Collapsible>
 
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
-            <div className="text-sm font-medium">System Prompt</div>
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
+            <label className="text-sm font-medium">System Prompt</label>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-2 border-b max-h-[20vh] overflow-y-auto">
+            <div className="p-4 border-b border-border bg-card space-y-2">
               <div className="flex gap-2">
                 <Textarea
                   id="systemPrompt"
@@ -283,14 +283,14 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
         </Collapsible>
 
         <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between p-2 border-b">
-            <div className="text-sm font-medium">Model Settings</div>
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
+            <label className="text-sm font-medium">Model Settings</label>
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="p-2 border-b space-y-2 max-h-[20vh] overflow-y-auto">
+            <div className="p-4 border-b border-border bg-card space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="maxTokens">Max Tokens</Label>
+                <label className="text-sm font-medium" htmlFor="maxTokens">Max Tokens</label>
                 <Input
                   id="maxTokens"
                   type="number"
@@ -301,7 +301,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="temperature">Temperature</Label>
+                <label className="text-sm font-medium" htmlFor="temperature">Temperature</label>
                 <Input
                   id="temperature"
                   type="number"
@@ -335,7 +335,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                 ? msg.content.map((block: ContentBlock, j: number) => {
                     if (block.type === 'text') {
                       return (
-                        <pre key={j} className="bg-gray-50 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm overflow-auto max-h-64">
+                        <pre key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm overflow-auto max-h-64">
                           {block.text}
                         </pre>
                       );
@@ -343,7 +343,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                     if (block.type === 'tool_result') {
                       const content = block.content;
                       return (
-                        <div key={j} className="bg-gray-50 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
+                        <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
                           <div className="font-medium mb-2">Tool Result (ID: {block.tool_use_id})</div>
                           {Array.isArray(content) ? (
                             <div className="space-y-2">
@@ -415,7 +415,7 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                     }
                     if (block.type === 'tool_use') {
                       return (
-                        <div key={j} className="bg-gray-50 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
+                        <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
                           <div className="font-medium mb-2">Tool Use: {block.name}</div>
                           <pre className="overflow-auto max-h-64">
                             {JSON.stringify(block.input, null, 2)}
