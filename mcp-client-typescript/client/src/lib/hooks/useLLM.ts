@@ -24,12 +24,41 @@ const generateResourceDocumentation = (resources: Resource[] = []): string | nul
   return documentation;
 };
 
-const generateToolDocumentation = (tools: Tool[] = []): string => {
-  if (tools.length === 0) {
+const getResourceReadingTool = (): Tool => {
+  return {
+    name: "read_resource",
+    description: "Read the content of a resource by its URI",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "The URI of the resource to read"
+        }
+      },
+      required: ["uri"]
+    }
+  };
+};
+
+const generateToolDocumentation = (tools: Tool[] = [], resources: Resource[] = []): string => {
+  if (tools.length === 0 && resources.length === 0) {
     return "No tools are currently available.";
   }
 
   let documentation = "Available Tools:\n\n";
+  
+  // Add read_resource tool first if resources are available
+  if (resources.length > 0) {
+    const readResourceTool = getResourceReadingTool();
+    documentation += `Tool: ${readResourceTool.name}\n`;
+    documentation += `Description: ${readResourceTool.description}\n`;
+    documentation += "Parameters:\n";
+    documentation += `- uri (Required): string\n`;
+    documentation += `  The URI of the resource to read\n\n`;
+  }
+
+  // Add other tools
   tools.forEach(tool => {
     documentation += `Tool: ${tool.name}\n`;
     documentation += `Description: ${tool.description || 'No description available'}\n`;
@@ -75,7 +104,7 @@ export function useLLM({ makeRequest, tools = [], resources = [], sessionId }: U
   }, [sessionId, llmService]);
 
   useEffect(() => {
-    const toolDocs = generateToolDocumentation(tools);
+    const toolDocs = generateToolDocumentation(tools, resources);
     const resourceDocs = generateResourceDocumentation(resources);
     
     let prompt = `You have access to various tools from connected MCP servers. When a user asks for information that requires using these tools, you should use the appropriate tool rather than stating you don't have access to that information.
@@ -98,14 +127,15 @@ When using tools:
   const processQuery = async (query: string, maxTokens: number = 8062, temperature: number = 0.4) => {
     setProcessing(true);
     try {
-      // Get available tools
+      // Get available tools but don't include read_resource in the server tools list
       const { tools } = await makeRequest(
         { method: "tools/list" },
         ListToolsResultSchema
       );
 
-      // Process with LLM
-      const result = await llmService.processQuery(query, tools, history, systemPrompt, maxTokens, temperature);
+      // Process with LLM, including read_resource in the tools list for Claude
+      const allTools = resources.length > 0 ? [...tools, getResourceReadingTool()] : tools;
+      const result = await llmService.processQuery(query, allTools, history, systemPrompt, maxTokens, temperature);
 
       // Add the initial query and response to history
       // Add query and assistant response to history
@@ -118,16 +148,31 @@ When using tools:
 
       // Handle tool calls
       for (const toolCall of result.toolCalls) {
-        const toolResult = await makeRequest(
-          {
-            method: "tools/call",
-            params: {
-              name: toolCall.name,
-              arguments: toolCall.args
-            }
-          },
-          ResultSchema
-        );
+        let toolResult;
+        if (toolCall.name === 'read_resource') {
+          // Handle resource reading directly
+          toolResult = await makeRequest(
+            {
+              method: "resources/read",
+              params: {
+                uri: toolCall.args.uri
+              }
+            },
+            ResultSchema
+          );
+        } else {
+          // Handle other tools normally
+          toolResult = await makeRequest(
+            {
+              method: "tools/call",
+              params: {
+                name: toolCall.name,
+                arguments: toolCall.args
+              }
+            },
+            ResultSchema
+          );
+        }
 
         // Feed result back to LLM with updated history
         const followUp = await llmService.processToolResult(

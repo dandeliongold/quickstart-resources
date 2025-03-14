@@ -56,23 +56,6 @@ export class LLMService {
     this.initialized = true;
   }
 
-  private getResourceReadingTool(): Tool {
-    return {
-      name: "read_resource",
-      description: "Read the content of a resource by its URI",
-      inputSchema: {
-        type: "object",
-        properties: {
-          uri: {
-            type: "string",
-            description: "The URI of the resource to read"
-          }
-        },
-        required: ["uri"]
-      }
-    };
-  }
-
   async processQuery(
     query: string, 
     tools: Tool[],
@@ -87,9 +70,8 @@ export class LLMService {
 
     const fullSystemPrompt = systemPrompt || "You are a helpful AI assistant that can use tools to accomplish tasks.";
     try {
-      // Add resource reading tool and format all tools according to Anthropic's API spec
-      const allTools = [...tools, this.getResourceReadingTool()];
-      const formattedTools = allTools.map(tool => ({
+      // Format tools according to Anthropic's API spec
+      const formattedTools = tools.map(tool => ({
         name: tool.name,
         description: tool.description || "",
         input_schema: {
