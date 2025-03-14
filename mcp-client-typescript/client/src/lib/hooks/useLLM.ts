@@ -127,13 +127,7 @@ When using tools:
   const processQuery = async (query: string, maxTokens: number = 8062, temperature: number = 0.4) => {
     setProcessing(true);
     try {
-      // Get available tools but don't include read_resource in the server tools list
-      const { tools } = await makeRequest(
-        { method: "tools/list" },
-        ListToolsResultSchema
-      );
-
-      // Process with LLM, including read_resource in the tools list for Claude
+      // Use the tools from props, adding read_resource if resources are available
       const allTools = resources.length > 0 ? [...tools, getResourceReadingTool()] : tools;
       const result = await llmService.processQuery(query, allTools, history, systemPrompt, maxTokens, temperature);
 
@@ -144,7 +138,7 @@ When using tools:
       let currentAssistantContent: ContentBlock[] = [];
       
       // Add any text blocks from the initial response
-      for (const block of result.rawResponse.content) {
+      for (const block of result.rawResponse.content as ContentBlock[]) {
         if (block.type === 'text') {
           currentAssistantContent.push(block);
         }
