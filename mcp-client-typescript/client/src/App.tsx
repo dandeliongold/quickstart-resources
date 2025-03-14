@@ -1,16 +1,11 @@
 import {
   ClientRequest,
-  CompatibilityCallToolResult,
-  CompatibilityCallToolResultSchema,
   CreateMessageResult,
   GetPromptResultSchema,
   ListPromptsResultSchema,
   ListResourcesResultSchema,
-  ListResourceTemplatesResultSchema,
   ListToolsResultSchema,
-  ReadResourceResultSchema,
   Resource,
-  ResourceTemplate,
   Root,
   ServerNotification,
   Tool,
@@ -23,11 +18,8 @@ import { StdErrNotification } from "./lib/notificationTypes";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Files,
   FolderTree,
-  Hammer,
   Hash,
-  MessageSquare,
   MessageCircle,
 } from "lucide-react";
 
@@ -37,12 +29,10 @@ import "./App.css";
 import ConsoleTab from "./components/ConsoleTab";
 import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
-import PromptsTab, { Prompt } from "./components/PromptsTab";
-import ResourcesTab from "./components/ResourcesTab";
+import { Prompt } from "./lib/types";
 import RootsTab from "./components/RootsTab";
 import SamplingTab, { PendingRequest } from "./components/SamplingTab";
 import Sidebar from "./components/Sidebar";
-import ToolsTab from "./components/ToolsTab";
 
 const params = new URLSearchParams(window.location.search);
 const PROXY_PORT = params.get("proxyPort") ?? "3000";
@@ -61,15 +51,8 @@ const App = () => {
     );
   }
   const [resources, setResources] = useState<Resource[]>([]);
-  const [resourceTemplates, setResourceTemplates] = useState<
-    ResourceTemplate[]
-  >([]);
-  const [resourceContent, setResourceContent] = useState<string>("");
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [promptContent, setPromptContent] = useState<string>("");
   const [tools, setTools] = useState<Tool[]>([]);
-  const [toolResult, setToolResult] =
-    useState<CompatibilityCallToolResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string | null>>({
     resources: null,
     prompts: null,
@@ -124,23 +107,13 @@ const App = () => {
     });
   };
 
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(
-    null,
-  );
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [nextResourceCursor, setNextResourceCursor] = useState<
-    string | undefined
-  >();
-  const [nextResourceTemplateCursor, setNextResourceTemplateCursor] = useState<
     string | undefined
   >();
   const [nextPromptCursor, setNextPromptCursor] = useState<
     string | undefined
   >();
   const [nextToolCursor, setNextToolCursor] = useState<string | undefined>();
-  const progressTokenRef = useRef(0);
-
   const { height: historyPaneHeight, handleDragStart } = useDraggablePane(300);
 
   const {
@@ -279,34 +252,6 @@ const App = () => {
     setNextResourceCursor(response.nextCursor);
   };
 
-  const listResourceTemplates = async () => {
-    const response = await makeRequest(
-      {
-        method: "resources/templates/list" as const,
-        params: nextResourceTemplateCursor
-          ? { cursor: nextResourceTemplateCursor }
-          : {},
-      },
-      ListResourceTemplatesResultSchema,
-      "resources",
-    );
-    setResourceTemplates(
-      resourceTemplates.concat(response.resourceTemplates ?? []),
-    );
-    setNextResourceTemplateCursor(response.nextCursor);
-  };
-
-  const readResource = async (uri: string) => {
-    const response = await makeRequest(
-      {
-        method: "resources/read" as const,
-        params: { uri },
-      },
-      ReadResourceResultSchema,
-      "resources",
-    );
-    setResourceContent(JSON.stringify(response, null, 2));
-  };
 
   const listPrompts = async () => {
     const response = await makeRequest(
@@ -321,18 +266,6 @@ const App = () => {
     setNextPromptCursor(response.nextCursor);
   };
 
-  const getPrompt = async (name: string, args: Record<string, string> = {}) => {
-    const response = await makeRequest(
-      {
-        method: "prompts/get" as const,
-        params: { name, arguments: args },
-      },
-      GetPromptResultSchema,
-      "prompts",
-    );
-    setPromptContent(JSON.stringify(response, null, 2));
-  };
-
   const listTools = async () => {
     const response = await makeRequest(
       {
@@ -344,24 +277,6 @@ const App = () => {
     );
     setTools(response.tools);
     setNextToolCursor(response.nextCursor);
-  };
-
-  const callTool = async (name: string, params: Record<string, unknown>) => {
-    const response = await makeRequest(
-      {
-        method: "tools/call" as const,
-        params: {
-          name,
-          arguments: params,
-          _meta: {
-            progressToken: progressTokenRef.current++,
-          },
-        },
-      },
-      CompatibilityCallToolResultSchema,
-      "tools",
-    );
-    setToolResult(response);
   };
 
   const handleRootsChange = async () => {
@@ -406,27 +321,6 @@ const App = () => {
               onValueChange={(value) => (window.location.hash = value)}
             >
               <TabsList className="mb-4 p-0">
-                <TabsTrigger
-                  value="resources"
-                  disabled={!serverCapabilities?.resources}
-                >
-                  <Files className="w-4 h-4 mr-2" />
-                  Resources
-                </TabsTrigger>
-                <TabsTrigger
-                  value="prompts"
-                  disabled={!serverCapabilities?.prompts}
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Prompts
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tools"
-                  disabled={!serverCapabilities?.tools}
-                >
-                  <Hammer className="w-4 h-4 mr-2" />
-                  Tools
-                </TabsTrigger>
                 <TabsTrigger value="sampling" className="relative">
                   <Hash className="w-4 h-4 mr-2" />
                   Sampling
@@ -457,90 +351,6 @@ const App = () => {
                   </div>
                 ) : (
                   <>
-                    <ResourcesTab
-                      resources={resources}
-                      resourceTemplates={resourceTemplates}
-                      listResources={() => {
-                        clearError("resources");
-                        listResources();
-                      }}
-                      clearResources={() => {
-                        setResources([]);
-                        setNextResourceCursor(undefined);
-                      }}
-                      listResourceTemplates={() => {
-                        clearError("resources");
-                        listResourceTemplates();
-                      }}
-                      clearResourceTemplates={() => {
-                        setResourceTemplates([]);
-                        setNextResourceTemplateCursor(undefined);
-                      }}
-                      readResource={(uri) => {
-                        clearError("resources");
-                        readResource(uri);
-                      }}
-                      selectedResource={selectedResource}
-                      setSelectedResource={(resource) => {
-                        clearError("resources");
-                        setSelectedResource(resource);
-                      }}
-                      handleCompletion={handleCompletion}
-                      completionsSupported={completionsSupported}
-                      resourceContent={resourceContent}
-                      nextCursor={nextResourceCursor}
-                      nextTemplateCursor={nextResourceTemplateCursor}
-                      error={errors.resources}
-                    />
-                    <PromptsTab
-                      prompts={prompts}
-                      listPrompts={() => {
-                        clearError("prompts");
-                        listPrompts();
-                      }}
-                      clearPrompts={() => {
-                        setPrompts([]);
-                        setNextPromptCursor(undefined);
-                      }}
-                      getPrompt={(name, args) => {
-                        clearError("prompts");
-                        getPrompt(name, args);
-                      }}
-                      selectedPrompt={selectedPrompt}
-                      setSelectedPrompt={(prompt) => {
-                        clearError("prompts");
-                        setSelectedPrompt(prompt);
-                      }}
-                      handleCompletion={handleCompletion}
-                      completionsSupported={completionsSupported}
-                      promptContent={promptContent}
-                      nextCursor={nextPromptCursor}
-                      error={errors.prompts}
-                    />
-                    <ToolsTab
-                      tools={tools}
-                      listTools={() => {
-                        clearError("tools");
-                        listTools();
-                      }}
-                      clearTools={() => {
-                        setTools([]);
-                        setNextToolCursor(undefined);
-                      }}
-                      callTool={(name, params) => {
-                        clearError("tools");
-                        callTool(name, params);
-                      }}
-                      selectedTool={selectedTool}
-                      setSelectedTool={(tool) => {
-                        clearError("tools");
-                        setSelectedTool(tool);
-                        setToolResult(null);
-                      }}
-                      toolResult={toolResult}
-                      nextCursor={nextToolCursor}
-                      error={errors.tools}
-                    />
                     <ConsoleTab />
                     <SamplingTab
                       pendingRequests={pendingSampleRequests}
@@ -553,7 +363,7 @@ const App = () => {
                       onRootsChange={handleRootsChange}
                     />
                     <ChatTab 
-                      makeRequest={(request, schema, options) => makeRequest(request, schema)}
+                      makeRequest={(request, schema) => makeRequest(request, schema)}
                       tools={tools}
                       listTools={() => {
                         clearError("tools");

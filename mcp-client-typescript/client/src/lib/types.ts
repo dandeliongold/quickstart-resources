@@ -22,3 +22,13 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string | ContentBlock[];
 }
+
+export type Prompt = {
+  name: string;
+  description?: string;
+  arguments?: {
+    name: string;
+    description?: string;
+    required?: boolean;
+  }[];
+};
