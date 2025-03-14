@@ -167,9 +167,14 @@ export class LLMService {
         }] as ContentBlock[]
       };
 
-      // Get the last assistant message which should contain the tool use
-      const lastAssistantMessage = history[history.length - 1];
-      if (!lastAssistantMessage || lastAssistantMessage.role !== 'assistant') {
+      // Find the last assistant message that contains the tool use
+      const lastAssistantMessage = [...history].reverse().find(
+        msg => msg.role === 'assistant' && 
+        Array.isArray(msg.content) && 
+        msg.content.some(block => block.type === 'tool_use' && block.id === toolCall.id)
+      );
+      
+      if (!lastAssistantMessage) {
         throw new Error('No assistant message found with tool use');
       }
 
@@ -177,20 +182,10 @@ export class LLMService {
         model: this.model,
         max_tokens: maxTokens,
         temperature: temperature,
-        messages: [
-          ...history.slice(0, -1).map(msg => ({
-            role: msg.role,
-            content: convertToAnthropicMessage(msg.content)
-          })) as SimplifiedMessage[],
-          {
-            role: lastAssistantMessage.role,
-            content: convertToAnthropicMessage(lastAssistantMessage.content)
-          },
-          {
-            role: toolResultMessage.role,
-            content: convertToAnthropicMessage(toolResultMessage.content)
-          }
-        ] as SimplifiedMessage[],
+        messages: history.map(msg => ({
+          role: msg.role,
+          content: convertToAnthropicMessage(msg.content)
+        })) as SimplifiedMessage[],
         system: fullSystemPrompt
       });
 

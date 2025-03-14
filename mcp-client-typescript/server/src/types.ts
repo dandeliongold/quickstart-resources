@@ -3,6 +3,12 @@ export interface TextBlock {
   text: string;
 }
 
+export interface ImageBlock {
+  type: 'image';
+  mimeType: string;
+  data: string;
+}
+
 export interface ResourceBlock {
   type: 'resource';
   resource: {
@@ -15,7 +21,7 @@ export interface ResourceBlock {
 export interface ToolResultBlock {
   type: 'tool_result';
   tool_use_id: string;
-  content: Array<TextBlock | ResourceBlock> | string;
+  content: Array<TextBlock | ImageBlock | ResourceBlock> | string;
 }
 
 export interface ToolUseBlock {

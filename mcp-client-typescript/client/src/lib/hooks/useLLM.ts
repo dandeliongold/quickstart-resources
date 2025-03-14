@@ -3,7 +3,7 @@ import { LLMService } from '../services/llm';
 import { ListToolsResultSchema, ReadResourceResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Message } from '../../../../server/src/types.js';
+import { Message, ContentBlock, TextBlock, ImageBlock, ResourceBlock, ToolUseBlock } from '../../../../server/src/types.js';
 
 type MakeRequestFunction = <T extends z.ZodType>(
   request: any,
@@ -137,87 +137,155 @@ When using tools:
       const allTools = resources.length > 0 ? [...tools, getResourceReadingTool()] : tools;
       const result = await llmService.processQuery(query, allTools, history, systemPrompt, maxTokens, temperature);
 
-      // Add the initial query and response to history
-      // Add query and assistant response to history
-      const newHistory = [
-        ...history,
-        { role: 'user' as const, content: query },
-        { role: 'assistant' as const, content: result.rawResponse.content }
-      ];
-      setHistory(newHistory);
+      // Add the initial query to history
+      const newHistory = [...history, { role: 'user' as const, content: query }];
+
+      // Process the initial response and any tool calls
+      let currentAssistantContent: ContentBlock[] = [];
+      
+      // Add any text blocks from the initial response
+      for (const block of result.rawResponse.content) {
+        if (block.type === 'text') {
+          currentAssistantContent.push(block);
+        }
+      }
 
       // Handle tool calls
       for (const toolCall of result.toolCalls) {
-        let toolResult;
-        if (toolCall.name === 'read_resource') {
-          // Handle resource reading directly using ReadResourceResultSchema
-          toolResult = await makeRequest(
-            {
-              method: "resources/read",
-              params: {
-                uri: toolCall.args.uri
-              }
-            },
-            ReadResourceResultSchema
-          );
-          
-          // Format the response consistently with ResourcesTab
-          const formattedContent = JSON.stringify(toolResult, null, 2);
-          toolResult = {
-            ...toolResult,
-            content: [{
-              type: 'text',
-              text: formattedContent
-            }]
-          };
-        } else {
-          // Handle other tools normally
-          toolResult = await makeRequest(
-            {
-              method: "tools/call",
-              params: {
-                name: toolCall.name,
-                arguments: toolCall.args
-              }
-            },
-            ResultSchema
-          );
+        // Add the tool use block to the assistant's message
+        const toolUseBlock = result.rawResponse.content.find(
+          block => block.type === 'tool_use' && block.id === toolCall.id
+        );
+        if (toolUseBlock) {
+          currentAssistantContent.push(toolUseBlock);
         }
 
-        // Feed result back to LLM with updated history
-        const followUp = await llmService.processToolResult(
-          toolCall,
-          toolResult,
-          newHistory,
-          systemPrompt,
-          maxTokens,
-          temperature
-        );
+        // Add the assistant's message with tool use
+        const assistantMessage = {
+          role: 'assistant' as const,
+          content: currentAssistantContent
+        };
+        newHistory.push(assistantMessage);
 
-        // Update history with tool result and follow-up
-        newHistory.push(
-          {
+        // Execute the tool and get result
+        let toolResult;
+        try {
+          if (toolCall.name === 'read_resource') {
+            toolResult = await makeRequest(
+              {
+                method: "resources/read",
+                params: {
+                  uri: toolCall.args.uri
+                }
+              },
+              ReadResourceResultSchema
+            );
+            
+            toolResult = {
+              ...toolResult,
+              content: [{
+                type: 'text',
+                text: JSON.stringify(toolResult, null, 2)
+              }]
+            };
+          } else {
+            toolResult = await makeRequest(
+              {
+                method: "tools/call",
+                params: {
+                  name: toolCall.name,
+                  arguments: toolCall.args
+                }
+              },
+              ResultSchema
+            );
+          }
+
+          // Format tool result content
+          const formattedContent = (() => {
+            if (typeof toolResult.content === 'string') {
+              return [{ type: 'text' as const, text: toolResult.content }];
+            }
+            if (Array.isArray(toolResult.content)) {
+              return toolResult.content.map(item => {
+                if (item.type === 'image') {
+                  return {
+                    type: 'image' as const,
+                    mimeType: item.mimeType,
+                    data: item.data
+                  } as ImageBlock;
+                }
+                if (item.type === 'resource' && item.resource) {
+                  return {
+                    type: 'resource' as const,
+                    resource: {
+                      uri: item.resource.uri,
+                      mimeType: item.resource.mimeType,
+                      blob: item.resource.blob
+                    }
+                  } as ResourceBlock;
+                }
+                if ('text' in item) {
+                  return { 
+                    type: 'text' as const, 
+                    text: item.text 
+                  } as TextBlock;
+                }
+                return { 
+                  type: 'text' as const, 
+                  text: JSON.stringify(item, null, 2)
+                } as TextBlock;
+              });
+            }
+            return [{ 
+              type: 'text' as const, 
+              text: JSON.stringify(toolResult.content, null, 2)
+            }];
+          })();
+
+          // Create and add tool result message to history
+          const toolResultMessage = {
             role: 'user' as const,
             content: [{
               type: 'tool_result' as const,
               tool_use_id: toolCall.id,
-              content: typeof toolResult.content === 'string'
-                ? toolResult.content
-                : Array.isArray(toolResult.content)
-                  ? toolResult.content  // Already an array of TextBlocks
-                  : [{ 
-                      type: 'text' as const, 
-                      text: JSON.stringify(toolResult.content, null, 2)  // Format JSON nicely
-                    }]
+              content: formattedContent
             }]
-          },
-          {
-            role: 'assistant' as const,
-            content: followUp.rawResponse.content
-          }
-        );
-        setHistory([...newHistory]);
+          };
+          newHistory.push(toolResultMessage);
+
+          // Get follow-up response with complete history
+          const followUp = await llmService.processToolResult(
+            toolCall,
+            toolResult,
+            newHistory,
+            systemPrompt,
+            maxTokens,
+            temperature
+          );
+
+          // Update current assistant content for next iteration
+          currentAssistantContent = followUp.rawResponse.content;
+
+        } catch (error: unknown) {
+          console.error('Error executing tool:', error);
+          // In case of error, keep the assistant message but don't add failed tool result
+          currentAssistantContent = [{
+            type: 'text',
+            text: `Error executing tool ${toolCall.name}: ${error instanceof Error ? error.message : String(error)}`
+          }];
+        }
       }
+
+      // Add final assistant message if there's remaining content
+      if (currentAssistantContent.length > 0) {
+        newHistory.push({
+          role: 'assistant' as const,
+          content: currentAssistantContent
+        });
+      }
+
+      setHistory(newHistory);
 
       return result.text;
     } finally {
