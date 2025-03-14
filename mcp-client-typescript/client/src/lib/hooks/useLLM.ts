@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { LLMService } from '../services/llm';
-import { ListToolsResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsResultSchema, ReadResourceResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import { Message } from '../../../../server/src/types.js';
@@ -150,7 +150,7 @@ When using tools:
       for (const toolCall of result.toolCalls) {
         let toolResult;
         if (toolCall.name === 'read_resource') {
-          // Handle resource reading directly
+          // Handle resource reading directly using ReadResourceResultSchema
           toolResult = await makeRequest(
             {
               method: "resources/read",
@@ -158,8 +158,18 @@ When using tools:
                 uri: toolCall.args.uri
               }
             },
-            ResultSchema
+            ReadResourceResultSchema
           );
+          
+          // Format the response consistently with ResourcesTab
+          const formattedContent = JSON.stringify(toolResult, null, 2);
+          toolResult = {
+            ...toolResult,
+            content: [{
+              type: 'text',
+              text: formattedContent
+            }]
+          };
         } else {
           // Handle other tools normally
           toolResult = await makeRequest(
