@@ -153,6 +153,7 @@ const App = () => {
     handleCompletion,
     completionsSupported,
     connect: connectMcpServer,
+    sessionId,
   } = useConnection({
     transportType,
     command,
@@ -585,6 +586,7 @@ const App = () => {
                         clearError("resources");
                         listResources();
                       }}
+                      sessionId={sessionId}
                     />
                   </>
                 )}

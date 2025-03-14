@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { parse as shellParseArgs } from "shell-quote";
 import { LLMService } from "./services/llm.js";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   SSEClientTransport,
   SseError,
@@ -41,12 +42,58 @@ if (!process.env.ANTHROPIC_API_KEY) {
   throw new Error('ANTHROPIC_API_KEY environment variable is required');
 }
 
-const llmService = new LLMService(process.env.ANTHROPIC_API_KEY);
+// Track active client instances and their associated services
+interface ClientInstance {
+  client: Client;
+  llmService: LLMService;
+}
+
+const activeClients = new Map<string, ClientInstance>();
+
+// Create a new client instance for each connection
+function createClientInstance(): ClientInstance {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is required');
+  }
+
+  const client = new Client({ 
+    name: "mcp-server", 
+    version: "1.0.0",
+    capabilities: {
+      resources: {
+        listChanged: true,
+        subscribe: true
+      },
+      sampling: {}
+    }
+  });
+
+  const llmService = new LLMService(process.env.ANTHROPIC_API_KEY, client);
+
+  return { client, llmService };
+}
 
 app.post("/llm/process", express.json(), async (req, res) => {
   try {
-    const { query, tools, history, systemPrompt } = req.body;
-    const result = await llmService.processQuery(query, tools, history, systemPrompt);
+    const sessionId = req.query.sessionId as string;
+    if (!sessionId) {
+      throw new Error('Session ID is required');
+    }
+
+    const clientInstance = activeClients.get(sessionId);
+    if (!clientInstance) {
+      throw new Error('No active MCP connection for this session');
+    }
+
+    const { query, tools, history, systemPrompt, maxTokens, temperature } = req.body;
+    const result = await clientInstance.llmService.processQuery(
+      query, 
+      tools, 
+      history, 
+      systemPrompt,
+      maxTokens,
+      temperature
+    );
     res.json(result);
   } catch (error: unknown) {
     console.error("Error processing LLM query:", error);
@@ -58,8 +105,25 @@ app.post("/llm/process", express.json(), async (req, res) => {
 
 app.post("/llm/process-tool-result", express.json(), async (req, res) => {
   try {
-    const { toolCall, toolResult, history, systemPrompt } = req.body;
-    const result = await llmService.processToolResult(toolCall, toolResult, history, systemPrompt);
+    const sessionId = req.query.sessionId as string;
+    if (!sessionId) {
+      throw new Error('Session ID is required');
+    }
+
+    const clientInstance = activeClients.get(sessionId);
+    if (!clientInstance) {
+      throw new Error('No active MCP connection for this session');
+    }
+
+    const { toolCall, toolResult, history, systemPrompt, maxTokens, temperature } = req.body;
+    const result = await clientInstance.llmService.processToolResult(
+      toolCall, 
+      toolResult, 
+      history, 
+      systemPrompt,
+      maxTokens,
+      temperature
+    );
     res.json(result);
   } catch (error: unknown) {
     console.error("Error processing tool result:", error);
@@ -88,17 +152,13 @@ const createTransport = async (req: express.Request) => {
 
     console.log(`Stdio transport: command=${cmd}, args=${args}`);
 
-    const transport = new StdioClientTransport({
+    console.log("Creating stdio transport");
+    return new StdioClientTransport({
       command: cmd,
       args,
       env,
       stderr: "pipe",
     });
-
-    await transport.start();
-
-    console.log("Spawned stdio transport");
-    return transport;
   } else if (transportType === "sse") {
     const url = query.url as string;
     const headers: HeadersInit = {};
@@ -153,32 +213,71 @@ app.get("/sse", async (req, res) => {
 
     console.log("Connected MCP client to backing server transport");
 
-    const webAppTransport = new SSEServerTransport("/message", res);
-    console.log("Created web app transport");
+    // Create new client instance for this connection
+    const sessionId = Date.now().toString();
+    const clientInstance = createClientInstance();
+    
+    try {
+      // Connect the client to the transport
+      await clientInstance.client.connect(backingServerTransport);
+      
+      // Initialize LLM service after connection is established
+      await clientInstance.llmService.initialize();
+      
+      // Store the active client
+      activeClients.set(sessionId, clientInstance);
 
-    webAppTransports.push(webAppTransport);
-    console.log("Created web app transport");
+      const webAppTransport = new SSEServerTransport("/message", res);
+      console.log("Created web app transport");
 
-    await webAppTransport.start();
+      webAppTransports.push(webAppTransport);
+      await webAppTransport.start();
 
-    if (backingServerTransport instanceof StdioClientTransport) {
-      backingServerTransport.stderr!.on("data", (chunk) => {
-        webAppTransport.send({
-          jsonrpc: "2.0",
-          method: "notifications/stderr",
-          params: {
-            content: chunk.toString(),
-          },
+      if (backingServerTransport instanceof StdioClientTransport) {
+        backingServerTransport.stderr!.on("data", (chunk) => {
+          webAppTransport.send({
+            jsonrpc: "2.0",
+            method: "notifications/stderr",
+            params: {
+              content: chunk.toString(),
+            },
+          });
         });
+      }
+
+      mcpProxy({
+        transportToClient: webAppTransport,
+        transportToServer: backingServerTransport,
       });
+
+      console.log("Set up MCP proxy");
+
+      // Handle cleanup when the connection is closed
+      res.on('close', async () => {
+        console.log('SSE connection closed');
+        const instance = activeClients.get(sessionId);
+        if (instance) {
+          await instance.client.close();
+          activeClients.delete(sessionId);
+        }
+        const index = webAppTransports.indexOf(webAppTransport);
+        if (index > -1) {
+          webAppTransports.splice(index, 1);
+        }
+      });
+
+      // Send session ID in initial response
+      webAppTransport.send({
+        jsonrpc: "2.0",
+        method: "session/created",
+        params: {
+          sessionId
+        }
+      });
+    } catch (error) {
+      console.error("Error setting up connection:", error);
+      throw error;
     }
-
-    mcpProxy({
-      transportToClient: webAppTransport,
-      transportToServer: backingServerTransport,
-    });
-
-    console.log("Set up MCP proxy");
   } catch (error) {
     console.error("Error in /sse route:", error);
     res.status(500).json(error);

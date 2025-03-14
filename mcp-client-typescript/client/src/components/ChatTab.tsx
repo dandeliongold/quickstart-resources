@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useLLM } from "@/lib/hooks/useLLM";
 import { z } from "zod";
-import { Message, ContentBlock, TextBlock, ToolResultBlock, ToolUseBlock } from '../../../server/src/types.js';
+import { ContentBlock } from '../../../server/src/types.js';
 import { 
   Tool, 
   Prompt, 
@@ -46,9 +46,10 @@ interface ChatTabProps {
   completionsSupported: boolean;
   resources: Resource[];
   listResources: () => void;
+  sessionId: string | null;
 }
 
-const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPrompt, handleCompletion, completionsSupported, resources, listResources }: ChatTabProps) => {
+const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPrompt, handleCompletion, completionsSupported, resources, listResources, sessionId }: ChatTabProps) => {
   const [query, setQuery] = useState('');
   const [includeResources, setIncludeResources] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -84,7 +85,12 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
     setMaxTokens,
     temperature,
     setTemperature
-  } = useLLM(makeRequest, tools, includeResources ? resources : []);
+  } = useLLM({
+    makeRequest,
+    tools,
+    resources: includeResources ? resources : [],
+    sessionId
+  });
 
   const handleSubmit = async () => {
     if (!query.trim() && !promptContent) return;

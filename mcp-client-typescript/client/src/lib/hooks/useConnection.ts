@@ -17,6 +17,8 @@ import {
   McpError,
   CompleteResultSchema,
   ErrorCode,
+  ResourceListChangedNotificationSchema,
+  ResourceUpdatedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -67,6 +69,7 @@ export function useConnection({
   const [serverCapabilities, setServerCapabilities] =
     useState<ServerCapabilities | null>(null);
   const [mcpClient, setMcpClient] = useState<Client | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [requestHistory, setRequestHistory] = useState<
     { request: string; response?: string }[]
   >([]);
@@ -99,9 +102,18 @@ export function useConnection({
 
       let response;
       try {
-        response = await mcpClient.request(request, schema, {
+        // Add sessionId to request params if available
+        const requestOptions = {
           signal: options?.signal ?? abortController.signal,
-        });
+        };
+        if (sessionId && request.method.startsWith("llm/")) {
+          request.params = {
+            ...request.params,
+            sessionId
+          };
+        }
+
+        response = await mcpClient.request(request, schema, requestOptions);
         pushHistory(request, response);
       } catch (error) {
         const errorMessage =
@@ -208,6 +220,10 @@ export function useConnection({
             roots: {
               listChanged: true,
             },
+            resources: {
+              listChanged: true,  // Get notified of resource changes
+              subscribe: true     // Support resource subscriptions
+            }
           },
         },
       );
@@ -240,6 +256,7 @@ export function useConnection({
         },
       });
 
+      // Set up notification handlers
       if (onNotification) {
         client.setNotificationHandler(
           ProgressNotificationSchema,
@@ -253,6 +270,39 @@ export function useConnection({
           onStdErrNotification,
         );
       }
+
+      // Handle session creation notification
+      client.setNotificationHandler(
+        z.object({
+          method: z.literal("session/created"),
+          params: z.object({
+            sessionId: z.string()
+          })
+        }),
+        (notification) => {
+          setSessionId(notification.params.sessionId);
+        }
+      );
+
+      // Handle resource notifications
+      client.setNotificationHandler(
+        ResourceListChangedNotificationSchema,
+        () => {
+          // Refresh UI when resources change
+          pushHistory({ type: "resource_list_changed" });
+        }
+      );
+
+      client.setNotificationHandler(
+        ResourceUpdatedNotificationSchema,
+        (notification) => {
+          // Track individual resource updates
+          pushHistory({ 
+            type: "resource_updated", 
+            uri: notification.params.uri 
+          });
+        }
+      );
 
       try {
         await client.connect(clientTransport);
@@ -300,6 +350,7 @@ export function useConnection({
     connectionStatus,
     serverCapabilities,
     mcpClient,
+    sessionId,
     requestHistory,
     makeRequest,
     sendNotification,

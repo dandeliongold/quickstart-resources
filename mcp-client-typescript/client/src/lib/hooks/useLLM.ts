@@ -11,9 +11,9 @@ type MakeRequestFunction = <T extends z.ZodType>(
   options?: { signal?: AbortSignal; timeout?: number; suppressToast?: boolean }
 ) => Promise<z.output<T>>;
 
-const generateResourceDocumentation = (resources: Resource[] = []): string => {
+const generateResourceDocumentation = (resources: Resource[] = []): string | null => {
   if (resources.length === 0) {
-    return "No resources are currently available.";
+    return null;
   }
 
   let documentation = "Available Resources:\n\n";
@@ -52,13 +52,27 @@ const generateToolDocumentation = (tools: Tool[] = []): string => {
   return documentation;
 };
 
-export function useLLM(makeRequest: MakeRequestFunction, tools: Tool[] = [], resources: Resource[] = []) {
-  const llmService = useMemo(() => new LLMService(), []);
+interface UseLLMProps {
+  makeRequest: MakeRequestFunction;
+  tools?: Tool[];
+  resources?: Resource[];
+  sessionId: string | null;
+}
+
+export function useLLM({ makeRequest, tools = [], resources = [], sessionId }: UseLLMProps) {
+  const llmService = useMemo(() => new LLMService(sessionId), []);
   const [processing, setProcessing] = useState(false);
   const [history, setHistory] = useState<Message[]>([]);
   const [systemPrompt, setSystemPrompt] = useState<string>("");
   const [maxTokens, setMaxTokens] = useState<number>(8062);
   const [temperature, setTemperature] = useState<number>(0.4);
+
+  // Update LLM service when sessionId changes
+  useEffect(() => {
+    if (sessionId) {
+      llmService.setSessionId(sessionId);
+    }
+  }, [sessionId, llmService]);
 
   useEffect(() => {
     const toolDocs = generateToolDocumentation(tools);
@@ -74,8 +88,8 @@ When using tools:
 3. Format the response in a user-friendly way
 4. If a tool call fails, check the error message and try again if it's recoverable`;
 
-    if (resources.length > 0) {
-      prompt += `\n\nYou also have access to the following resources:\n\n${resourceDocs}`;
+    if (resourceDocs) {
+      prompt += `\n\nYou have access to the following resources. To read a resource's content, use the read_resource tool with the resource's URI:\n\n${resourceDocs}`;
     }
 
     setSystemPrompt(prompt);

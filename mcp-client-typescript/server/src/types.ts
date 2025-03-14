@@ -3,10 +3,19 @@ export interface TextBlock {
   text: string;
 }
 
+export interface ResourceBlock {
+  type: 'resource';
+  resource: {
+    uri: string;
+    mimeType?: string;
+    blob?: string;
+  };
+}
+
 export interface ToolResultBlock {
   type: 'tool_result';
   tool_use_id: string;
-  content: TextBlock[] | string;
+  content: Array<TextBlock | ResourceBlock> | string;
 }
 
 export interface ToolUseBlock {
@@ -16,7 +25,7 @@ export interface ToolUseBlock {
   input: Record<string, unknown>;
 }
 
-export type ContentBlock = TextBlock | ToolResultBlock | ToolUseBlock;
+export type ContentBlock = TextBlock | ResourceBlock | ToolResultBlock | ToolUseBlock;
 
 export interface Message {
   role: 'user' | 'assistant';
