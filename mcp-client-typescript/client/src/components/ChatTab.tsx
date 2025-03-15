@@ -21,6 +21,144 @@ import {
   Resource,
   Root
 } from "@modelcontextprotocol/sdk/types.js";
+import { ReactNode } from 'react';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: TextContent | ImageContent;
+}
+
+interface ModelPreferences {
+  intelligencePriority?: number;
+  speedPriority?: number;
+  costPriority?: number;
+  hints?: Array<{ name: string }>;
+}
+
+interface SamplingRequest {
+  params: {
+    messages: Message[];
+    modelPreferences?: ModelPreferences;
+    systemPrompt?: string;
+    maxTokens?: number;
+  };
+  method: string;
+}
+
+interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: ContentBlock[] | string;
+  timestamp?: number;
+}
+
+interface SamplingHistoryItem {
+  type: 'sampling_request';
+  id: number;
+  request: SamplingRequest;
+  status: 'pending' | 'approved' | 'rejected';
+  timestamp?: number;
+}
+
+type HistoryItem = HistoryMessage | SamplingHistoryItem;
+
+function renderContent(content: ContentBlock[] | string): ReactNode {
+  if (Array.isArray(content)) {
+    return content.map((block: ContentBlock, j: number) => {
+      if (block.type === 'text') {
+        return (
+          <pre key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm overflow-auto max-h-64">
+            {block.text}
+          </pre>
+        );
+      }
+      if (block.type === 'tool_result') {
+        const content = block.content;
+        return (
+          <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
+            <div className="font-medium mb-2">Tool Result (ID: {block.tool_use_id})</div>
+            {Array.isArray(content) ? (
+              <div className="space-y-2">
+                {(content as Array<TextContent | ImageContent | EmbeddedResource>).map((item, k) => {
+                  if (item.type === "text") {
+                    // Try to parse as JSON for better formatting
+                    try {
+                      const parsed = JSON.parse(item.text);
+                      return (
+                        <pre key={k} className="overflow-auto max-h-64">
+                          {JSON.stringify(parsed, null, 2)}
+                        </pre>
+                      );
+                    } catch {
+                      return (
+                        <pre key={k} className="overflow-auto max-h-64">
+                          {item.text}
+                        </pre>
+                      );
+                    }
+                  }
+                  if (item.type === "image") {
+                    return (
+                      <img
+                        key={k}
+                        src={`data:${item.mimeType};base64,${item.data}`}
+                        alt="Tool result image"
+                        className="max-w-full h-auto rounded"
+                      />
+                    );
+                  }
+                  if (item.type === "resource" && item.resource) {
+                    if (item.resource.mimeType?.startsWith("audio/")) {
+                      return (
+                        <audio
+                          key={k}
+                          controls
+                          src={`data:${item.resource.mimeType};base64,${item.resource.blob}`}
+                          className="w-full"
+                        >
+                          <p>Your browser does not support audio playback</p>
+                        </audio>
+                      );
+                    }
+                    return (
+                      <pre key={k} className="overflow-auto max-h-64 whitespace-pre-wrap break-words">
+                        {JSON.stringify(item.resource, null, 2)}
+                      </pre>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            ) : (
+              <pre className="overflow-auto max-h-64">
+                {(() => {
+                  // Try to parse string content as JSON
+                  try {
+                    const parsed = JSON.parse(content);
+                    return JSON.stringify(parsed, null, 2);
+                  } catch {
+                    return content;
+                  }
+                })()}
+              </pre>
+            )}
+          </div>
+        );
+      }
+      if (block.type === 'tool_use') {
+        return (
+          <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
+            <div className="font-medium mb-2">Tool Use: {block.name}</div>
+            <pre className="overflow-auto max-h-64">
+              {JSON.stringify(block.input, null, 2)}
+            </pre>
+          </div>
+        );
+      }
+      return null;
+    });
+  }
+  return content;
+}
 import { Combobox } from "@/components/ui/combobox";
 import {
   Collapsible,
@@ -28,6 +166,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown, Plus, Minus, Save } from "lucide-react";
+
+import { PendingRequest } from "./SamplingTab";
+import SamplingRequestMessage from "./SamplingRequestMessage";
+import { CreateMessageResult } from "@modelcontextprotocol/sdk/types.js";
 
 interface ChatTabProps {
   makeRequest: <T extends z.ZodType>(
@@ -53,6 +195,9 @@ interface ChatTabProps {
   roots: Root[];
   setRoots: React.Dispatch<React.SetStateAction<Root[]>>;
   onRootsChange: () => void;
+  pendingRequests: PendingRequest[];
+  onApprove: (id: number, result: CreateMessageResult) => void;
+  onReject: (id: number) => void;
 }
 
 const ChatTab = ({ 
@@ -69,7 +214,10 @@ const ChatTab = ({
   sessionId,
   roots,
   setRoots,
-  onRootsChange
+  onRootsChange,
+  pendingRequests,
+  onApprove,
+  onReject
 }: ChatTabProps) => {
   const [query, setQuery] = useState('');
   const [includeResources, setIncludeResources] = useState(false);
@@ -422,116 +570,42 @@ const ChatTab = ({
         </Collapsible>
       </div>
       <div className="flex-1 overflow-auto space-y-2 p-2 min-h-[40vh]">
-        {history.map((msg, i) => (
+        {([...history, ...pendingRequests.map(req => ({
+          type: 'sampling_request',
+          id: req.id,
+          request: req.request,
+          status: 'pending' as const
+        }))] as HistoryItem[]).sort((a, b) => {
+          const aTime = a.timestamp ?? 0;
+          const bTime = b.timestamp ?? 0;
+          return aTime - bTime;
+        }).map((item: HistoryItem, i) => (
+          'type' in item && item.type === 'sampling_request' ? (
+            <SamplingRequestMessage
+              key={`sampling-${item.id}`}
+              id={item.id}
+              request={item.request}
+              status={item.status}
+              onApprove={onApprove}
+              onReject={onReject}
+            />
+          ) : (
           <div
-            key={i}
+            key={`msg-${i}`}
             className={`p-4 rounded-lg ${
-              msg.role === 'user'
+              'role' in item && item.role === 'user'
                 ? 'bg-primary/10 ml-8'
                 : 'bg-muted mr-8'
             }`}
           >
             <div className="font-semibold mb-1">
-              {msg.role === 'user' ? 'You' : 'Assistant'}
+              {'role' in item ? (item.role === 'user' ? 'You' : 'Assistant') : ''}
             </div>
             <div className="whitespace-pre-wrap space-y-2">
-              {Array.isArray(msg.content)
-                ? msg.content.map((block: ContentBlock, j: number) => {
-                    if (block.type === 'text') {
-                      return (
-                        <pre key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm overflow-auto max-h-64">
-                          {block.text}
-                        </pre>
-                      );
-                    }
-                    if (block.type === 'tool_result') {
-                      const content = block.content;
-                      return (
-                        <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
-                          <div className="font-medium mb-2">Tool Result (ID: {block.tool_use_id})</div>
-                          {Array.isArray(content) ? (
-                            <div className="space-y-2">
-                              {(content as Array<TextContent | ImageContent | EmbeddedResource>).map((item, k) => {
-                                if (item.type === "text") {
-                                  // Try to parse as JSON for better formatting
-                                  try {
-                                    const parsed = JSON.parse(item.text);
-                                    return (
-                                      <pre key={k} className="overflow-auto max-h-64">
-                                        {JSON.stringify(parsed, null, 2)}
-                                      </pre>
-                                    );
-                                  } catch {
-                                    return (
-                                      <pre key={k} className="overflow-auto max-h-64">
-                                        {item.text}
-                                      </pre>
-                                    );
-                                  }
-                                }
-                                if (item.type === "image") {
-                                  return (
-                                    <img
-                                      key={k}
-                                      src={`data:${item.mimeType};base64,${item.data}`}
-                                      alt="Tool result image"
-                                      className="max-w-full h-auto rounded"
-                                    />
-                                  );
-                                }
-                                if (item.type === "resource" && item.resource) {
-                                  if (item.resource.mimeType?.startsWith("audio/")) {
-                                    return (
-                                      <audio
-                                        key={k}
-                                        controls
-                                        src={`data:${item.resource.mimeType};base64,${item.resource.blob}`}
-                                        className="w-full"
-                                      >
-                                        <p>Your browser does not support audio playback</p>
-                                      </audio>
-                                    );
-                                  }
-                                  return (
-                                    <pre key={k} className="overflow-auto max-h-64 whitespace-pre-wrap break-words">
-                                      {JSON.stringify(item.resource, null, 2)}
-                                    </pre>
-                                  );
-                                }
-                                return null;
-                              })}
-                            </div>
-                          ) : (
-                            <pre className="overflow-auto max-h-64">
-                              {(() => {
-                                // Try to parse string content as JSON
-                                try {
-                                  const parsed = JSON.parse(content);
-                                  return JSON.stringify(parsed, null, 2);
-                                } catch {
-                                  return content;
-                                }
-                              })()}
-                            </pre>
-                          )}
-                        </div>
-                      );
-                    }
-                    if (block.type === 'tool_use') {
-                      return (
-                        <div key={j} className="bg-gray-50 text-gray-900 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm">
-                          <div className="font-medium mb-2">Tool Use: {block.name}</div>
-                          <pre className="overflow-auto max-h-64">
-                            {JSON.stringify(block.input, null, 2)}
-                          </pre>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })
-                : msg.content}
+              {('role' in item) ? renderContent(item.content) : null}
             </div>
           </div>
+          )
         ))}
       </div>
 

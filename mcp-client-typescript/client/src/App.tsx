@@ -389,6 +389,9 @@ const App = () => {
                       roots={roots}
                       setRoots={setRoots}
                       onRootsChange={handleRootsChange}
+                      pendingRequests={pendingSampleRequests}
+                      onApprove={handleApproveSampling}
+                      onReject={handleRejectSampling}
                     />
                   </>
                 )}
