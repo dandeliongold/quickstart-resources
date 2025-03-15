@@ -1,4 +1,5 @@
 import { TabsContent } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +18,8 @@ import {
   TextContent,
   ImageContent,
   EmbeddedResource,
-  Resource
+  Resource,
+  Root
 } from "@modelcontextprotocol/sdk/types.js";
 import { Combobox } from "@/components/ui/combobox";
 import {
@@ -25,7 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, Minus, Save } from "lucide-react";
 
 interface ChatTabProps {
   makeRequest: <T extends z.ZodType>(
@@ -48,9 +50,27 @@ interface ChatTabProps {
   resources: Resource[];
   listResources: () => void;
   sessionId: string | null;
+  roots: Root[];
+  setRoots: React.Dispatch<React.SetStateAction<Root[]>>;
+  onRootsChange: () => void;
 }
 
-const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPrompt, handleCompletion, completionsSupported, resources, listResources, sessionId }: ChatTabProps) => {
+const ChatTab = ({ 
+  makeRequest, 
+  tools, 
+  listTools, 
+  prompts, 
+  listPrompts, 
+  getPrompt, 
+  handleCompletion, 
+  completionsSupported, 
+  resources, 
+  listResources, 
+  sessionId,
+  roots,
+  setRoots,
+  onRootsChange
+}: ChatTabProps) => {
   const [query, setQuery] = useState('');
   const [includeResources, setIncludeResources] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -344,6 +364,58 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
                   onChange={(e) => setTemperature(Math.min(1, Math.max(0, parseFloat(e.target.value) || 0)))}
                   className="w-full"
                 />
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
+            <label className="text-sm font-medium">Roots</label>
+            <ChevronDown className="h-4 w-4" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-4 border-b border-border bg-card space-y-4">
+              <Alert>
+                <AlertDescription>
+                  Configure the root directories that the server can access
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                {roots.map((root, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="file:// URI"
+                      value={root.uri}
+                      onChange={(e) => setRoots(currentRoots => 
+                        currentRoots.map((r, i) => 
+                          i === index ? { ...r, uri: e.target.value } : r
+                        )
+                      )}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setRoots(currentRoots => currentRoots.filter((_, i) => i !== index))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setRoots(currentRoots => [...currentRoots, { uri: "file://", name: "" }])}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Root
+                  </Button>
+                  <Button onClick={onRootsChange}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
+                </div>
               </div>
             </div>
           </CollapsibleContent>

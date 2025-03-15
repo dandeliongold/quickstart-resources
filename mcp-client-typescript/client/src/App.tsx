@@ -18,7 +18,6 @@ import { StdErrNotification } from "./lib/notificationTypes";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  FolderTree,
   Hash,
   MessageCircle,
 } from "lucide-react";
@@ -30,7 +29,6 @@ import ConsoleTab from "./components/ConsoleTab";
 import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
 import { Prompt } from "./lib/types";
-import RootsTab from "./components/RootsTab";
 import SamplingTab, { PendingRequest } from "./components/SamplingTab";
 import Sidebar from "./components/Sidebar";
 
@@ -330,10 +328,6 @@ const App = () => {
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="roots">
-                  <FolderTree className="w-4 h-4 mr-2" />
-                  Roots
-                </TabsTrigger>
                 <TabsTrigger value="chat">
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Chat
@@ -356,11 +350,6 @@ const App = () => {
                       pendingRequests={pendingSampleRequests}
                       onApprove={handleApproveSampling}
                       onReject={handleRejectSampling}
-                    />
-                    <RootsTab
-                      roots={roots}
-                      setRoots={setRoots}
-                      onRootsChange={handleRootsChange}
                     />
                     <ChatTab 
                       makeRequest={(request, schema) => makeRequest(request, schema)}
@@ -397,6 +386,9 @@ const App = () => {
                         listResources();
                       }}
                       sessionId={sessionId}
+                      roots={roots}
+                      setRoots={setRoots}
+                      onRootsChange={handleRootsChange}
                     />
                   </>
                 )}
