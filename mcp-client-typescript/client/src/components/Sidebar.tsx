@@ -3,8 +3,6 @@ import {
   Play,
   ChevronDown,
   ChevronRight,
-  CircleHelp,
-  Github,
   Eye,
   EyeOff,
 } from "lucide-react";
