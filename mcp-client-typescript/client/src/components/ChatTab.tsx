@@ -23,27 +23,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ReactNode } from 'react';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: TextContent | ImageContent;
-}
-
-interface ModelPreferences {
-  intelligencePriority?: number;
-  speedPriority?: number;
-  costPriority?: number;
-  hints?: Array<{ name: string }>;
-}
-
-interface SamplingRequest {
-  params: {
-    messages: Message[];
-    modelPreferences?: ModelPreferences;
-    systemPrompt?: string;
-    maxTokens?: number;
-  };
-  method: string;
-}
+import { SamplingRequest } from "@/lib/types/sampling";
 
 interface HistoryMessage {
   role: 'user' | 'assistant';
@@ -167,7 +147,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, Plus, Minus, Save } from "lucide-react";
 
-import { PendingRequest } from "./SamplingTab";
+import { PendingRequest } from "@/lib/types/sampling";
 import SamplingRequestMessage from "./SamplingRequestMessage";
 import { CreateMessageResult } from "@modelcontextprotocol/sdk/types.js";
 

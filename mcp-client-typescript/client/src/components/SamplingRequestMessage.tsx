@@ -2,33 +2,9 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Check, X, ChevronDown } from "lucide-react";
-import type {
-  CreateMessageResult,
-  TextContent,
-  ImageContent
-} from "@modelcontextprotocol/sdk/types.js";
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: TextContent | ImageContent;
-}
-
-interface ModelPreferences {
-  intelligencePriority?: number;
-  speedPriority?: number;
-  costPriority?: number;
-  hints?: Array<{ name: string }>;
-}
-
-interface SamplingRequest {
-  params: {
-    messages: Message[];
-    modelPreferences?: ModelPreferences;
-    systemPrompt?: string;
-    maxTokens?: number;
-  };
-  method: string;
-}
+import type { CreateMessageResult } from "@modelcontextprotocol/sdk/types.js";
+import type { SamplingRequest } from "@/lib/types/sampling";
+import type { SamplingMessage } from "@modelcontextprotocol/sdk/types.js";
 
 export type SamplingRequestMessageProps = {
   id: number;
@@ -105,7 +81,7 @@ const SamplingRequestMessage = ({
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Messages</h4>
             <div className="space-y-2">
-              {request.params.messages.map((msg: Message, index: number) => (
+              {request.params.messages.map((msg: SamplingMessage, index: number) => (
                 <div 
                   key={index}
                   className={`p-2 rounded ${

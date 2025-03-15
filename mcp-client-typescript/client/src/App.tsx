@@ -17,10 +17,7 @@ import { useDraggablePane } from "./lib/hooks/useDraggablePane";
 import { StdErrNotification } from "./lib/notificationTypes";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Hash,
-  MessageCircle,
-} from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 import { toast } from "react-toastify";
 import { z } from "zod";
@@ -29,7 +26,7 @@ import ConsoleTab from "./components/ConsoleTab";
 import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
 import { Prompt } from "./lib/types";
-import SamplingTab, { PendingRequest } from "./components/SamplingTab";
+import { PendingRequest } from "./lib/types/sampling";
 import Sidebar from "./components/Sidebar";
 
 const params = new URLSearchParams(window.location.search);
@@ -319,18 +316,14 @@ const App = () => {
               onValueChange={(value) => (window.location.hash = value)}
             >
               <TabsList className="mb-4 p-0">
-                <TabsTrigger value="sampling" className="relative">
-                  <Hash className="w-4 h-4 mr-2" />
-                  Sampling
+                <TabsTrigger value="chat" className="relative">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Chat
                   {pendingSampleRequests.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                       {pendingSampleRequests.length}
                     </span>
                   )}
-                </TabsTrigger>
-                <TabsTrigger value="chat">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Chat
                 </TabsTrigger>
               </TabsList>
 
@@ -346,11 +339,6 @@ const App = () => {
                 ) : (
                   <>
                     <ConsoleTab />
-                    <SamplingTab
-                      pendingRequests={pendingSampleRequests}
-                      onApprove={handleApproveSampling}
-                      onReject={handleRejectSampling}
-                    />
                     <ChatTab 
                       makeRequest={(request, schema) => makeRequest(request, schema)}
                       tools={tools}
