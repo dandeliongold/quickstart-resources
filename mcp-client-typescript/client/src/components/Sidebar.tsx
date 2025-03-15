@@ -295,30 +295,6 @@ const Sidebar = ({
               <SelectItem value="dark">Dark</SelectItem>
             </SelectContent>
           </Select>
-
-          <div className="flex items-center space-x-2">
-            <a
-              href="https://modelcontextprotocol.io/quickstart/client"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="ghost" title="Tutorial Documentation">
-                <CircleHelp className="w-4 h-4 text-gray-800" />
-              </Button>
-            </a>
-            <a
-              href="https://github.com/modelcontextprotocol/quickstart"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button
-                variant="ghost"
-                title="Report bugs or contribute on GitHub"
-              >
-                <Github className="w-4 h-4 text-gray-800" />
-              </Button>
-            </a>
-          </div>
         </div>
       </div>
     </div>
