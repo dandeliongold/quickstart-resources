@@ -1,5 +1,6 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -480,7 +481,16 @@ const ChatTab = ({ makeRequest, tools, listTools, prompts, listPrompts, getPromp
             onClick={handleSubmit}
             disabled={processing || (!query.trim() && !promptContent)}
           >
-            {processing ? 'Processing...' : 'Send'}
+            <div className="flex items-center gap-2">
+              {processing ? (
+                <>
+                  <LoadingSpinner />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                'Send'
+              )}
+            </div>
           </Button>
           <Button
             variant="outline"
