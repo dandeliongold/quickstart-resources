@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { LLMService } from '../services/llm';
-import { ListToolsResultSchema, ReadResourceResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
+import { ReadResourceResultSchema, ResultSchema, Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import { Message, ContentBlock, TextBlock, ImageBlock, ResourceBlock, ToolUseBlock } from '../../../../server/src/types.js';
@@ -148,8 +148,8 @@ When using tools:
       for (const toolCall of result.toolCalls) {
         // Add the tool use block to the assistant's message
         const toolUseBlock = result.rawResponse.content.find(
-          block => block.type === 'tool_use' && block.id === toolCall.id
-        );
+          (block: ContentBlock) => block.type === 'tool_use' && block.id === toolCall.id
+        ) as ToolUseBlock | undefined;
         if (toolUseBlock) {
           currentAssistantContent.push(toolUseBlock);
         }
