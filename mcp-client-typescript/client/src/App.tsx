@@ -16,13 +16,9 @@ import { useDraggablePane } from "./lib/hooks/useDraggablePane";
 
 import { StdErrNotification } from "./lib/notificationTypes";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle } from "lucide-react";
-
 import { toast } from "react-toastify";
 import { z } from "zod";
 import "./App.css";
-import ConsoleTab from "./components/ConsoleTab";
 import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
 import { Prompt } from "./lib/types";
@@ -201,12 +197,6 @@ const App = () => {
     rootsRef.current = roots;
   }, [roots]);
 
-  useEffect(() => {
-    if (!window.location.hash) {
-      window.location.hash = "resources";
-    }
-  }, []);
-
   const clearError = (tabKey: keyof typeof errors) => {
     setErrors((prev) => ({ ...prev, [tabKey]: null }));
   };
@@ -298,37 +288,8 @@ const App = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           {mcpClient ? (
-            <Tabs
-              defaultValue={
-                Object.keys(serverCapabilities ?? {}).includes(
-                  window.location.hash.slice(1),
-                )
-                  ? window.location.hash.slice(1)
-                  : serverCapabilities?.resources
-                    ? "resources"
-                    : serverCapabilities?.prompts
-                      ? "prompts"
-                      : serverCapabilities?.tools
-                        ? "tools"
-                        : "ping"
-              }
-              className="w-full p-4"
-              onValueChange={(value) => (window.location.hash = value)}
-            >
-              <TabsList className="mb-4 p-0">
-                <TabsTrigger value="chat" className="relative">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Chat
-                  {pendingSampleRequests.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {pendingSampleRequests.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="w-full">
-                {!serverCapabilities?.resources &&
+            <div className="w-full p-4">
+              {!serverCapabilities?.resources &&
                 !serverCapabilities?.prompts &&
                 !serverCapabilities?.tools ? (
                   <div className="flex items-center justify-center p-4">
@@ -337,9 +298,7 @@ const App = () => {
                     </p>
                   </div>
                 ) : (
-                  <>
-                    <ConsoleTab />
-                    <ChatTab 
+                  <ChatTab 
                       makeRequest={(request, schema) => makeRequest(request, schema)}
                       tools={tools}
                       listTools={() => {
@@ -381,10 +340,8 @@ const App = () => {
                       onApprove={handleApproveSampling}
                       onReject={handleRejectSampling}
                     />
-                  </>
                 )}
-              </div>
-            </Tabs>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-lg text-gray-500">

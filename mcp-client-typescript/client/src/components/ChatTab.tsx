@@ -1,4 +1,3 @@
-import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -277,10 +276,7 @@ const ChatTab = ({
   };
 
   return (
-    <TabsContent 
-      value="chat" 
-      className="h-full flex flex-col"
-    >
+    <div className="h-full flex flex-col">
       <div className="space-y-2">
         <Collapsible defaultOpen={false}>
           <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
@@ -549,7 +545,7 @@ const ChatTab = ({
           </CollapsibleContent>
         </Collapsible>
       </div>
-      <div className="flex-1 overflow-auto space-y-2 p-2 min-h-[40vh]">
+      <div className="flex-1 overflow-auto space-y-2 p-2">
         {([...history, ...pendingRequests.map(req => ({
           type: 'sampling_request',
           id: req.id,
@@ -627,7 +623,7 @@ const ChatTab = ({
           </Button>
         </div>
       </div>
-    </TabsContent>
+    </div>
   );
 };
 
