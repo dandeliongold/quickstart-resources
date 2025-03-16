@@ -38,6 +38,11 @@ export interface Message {
   content: string | ContentBlock[];
 }
 
+export interface SimplifiedMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface ProcessQueryResult {
   text: string;
   toolCalls: Array<{

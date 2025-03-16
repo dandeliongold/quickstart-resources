@@ -1,13 +1,8 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { Tool, Result as ToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { Message, ContentBlock, TextBlock, ProcessQueryResult, ToolUseBlock } from '../types.js';
+import { Message, ContentBlock, TextBlock, ProcessQueryResult, ToolUseBlock, SimplifiedMessage } from '../types.js';
 import type { Message as AnthropicMessageType } from '@anthropic-ai/sdk/resources/messages/messages.mjs';
-
-type SimplifiedMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
 
 function convertToAnthropicMessage(content: string | ContentBlock[]): string {
   if (typeof content === 'string') return content;
