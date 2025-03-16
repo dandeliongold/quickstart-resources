@@ -56,16 +56,16 @@ const SamplingRequestMessage = ({
   ) : null;
 
   return (
-    <div className="p-4 rounded-lg bg-muted/50 border border-border">
+    <div className="rounded-lg bg-card border border-border">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="flex w-full items-center justify-between">
+        <CollapsibleTrigger className="flex w-full items-center justify-between p-4 border-b border-border bg-card">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">📝 Sampling Request</span>
+            <span className="font-semibold">Sampling Request</span>
             {statusIcon}
           </div>
           <ChevronDown className="h-4 w-4" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4 space-y-4">
+        <CollapsibleContent className="p-4 space-y-4">
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Model Preferences</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
