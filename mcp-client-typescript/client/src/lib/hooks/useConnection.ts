@@ -28,7 +28,7 @@ import { Notification, StdErrNotificationSchema } from "../notificationTypes";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { authProvider } from "../auth";
 
-const DEFAULT_REQUEST_TIMEOUT_MSEC = 10000;
+const DEFAULT_REQUEST_TIMEOUT_MSEC = 60000;
 
 interface UseConnectionOptions {
   transportType: "stdio" | "sse";
