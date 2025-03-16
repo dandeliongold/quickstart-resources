@@ -21,7 +21,7 @@ import { z } from "zod";
 import "./App.css";
 import ChatTab from "./components/ChatTab";
 import HistoryAndNotifications from "./components/History";
-import { Prompt } from "./lib/types";
+import { Prompt } from "./lib/types/index";
 import { PendingRequest } from "./lib/types/sampling";
 import Sidebar from "./components/Sidebar";
 
